@@ -12,6 +12,7 @@ namespace SurveyPortal.API.Mappings
 
             CreateMap<Survey, SurveyDto>().ReverseMap();
             CreateMap<Question, QuestionDto>().ReverseMap();
+            CreateMap<Answer, AnswerDto>().ReverseMap();
         }
     }
 }

@@ -8,21 +8,26 @@ using Microsoft.Extensions.DependencyInjection;
 using SurveyPortal.API.Data;          // AppDbContext sýnýfýna eriþmek için
 using SurveyPortal.API.Repositories.Concrete;
 using SurveyPortal.API.Repositories.Interfaces;
+using Microsoft.OpenApi.Models; // EKLENDÝ: Swagger Kilit butonu için gerekli kütüphane
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // Repository ve UnitOfWork kayýtlarý (Dependency Injection)
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<SurveyPortal.API.Services.ISurveyService, SurveyPortal.API.Services.SurveyService>();
 builder.Services.AddScoped<SurveyPortal.API.Services.IQuestionService, SurveyPortal.API.Services.QuestionService>();
+builder.Services.AddScoped<SurveyPortal.API.Services.IAnswerService, SurveyPortal.API.Services.AnswerService>();
 builder.Services.AddScoped<SurveyPortal.API.Helpers.JwtTokenGenerator>();
+
 builder.Services.AddAutoMapper(config =>
 {
     config.AddProfile(new SurveyPortal.API.Mappings.MapProfile());
 });
+
 // --- IDENTITY AYARLARI ---
 builder.Services.AddIdentity<AppUser, AppRole>(options =>
 {
@@ -56,13 +61,42 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key)
     };
 });
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+
+builder.Services.AddSwaggerGen(c =>
+{
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Lütfen 'Bearer' yazýp bir boþluk býraktýktan sonra Token'ýnýzý yapýþtýrýn. \r\n\r\nÖrnek: 'Bearer eyJhbGci...'",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                },
+                Scheme = "oauth2",
+                Name = "Bearer",
+                In = ParameterLocation.Header,
+            },
+            new List<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -70,7 +104,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseAuthentication(); 
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 

@@ -13,6 +13,8 @@
 
         public string? UserId { get; set; } 
 
-        public ICollection<Answer>? Answers { get; set; } 
+        public ICollection<Answer>? Answers { get; set; }
+        public string? AppUserId { get; set; }
+        public AppUser? AppUser { get; set; }
     }
 }
