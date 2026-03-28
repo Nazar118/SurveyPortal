@@ -108,4 +108,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    await SurveyPortal.API.Helpers.DbSeeder.SeedRolesAndAdminAsync(scope.ServiceProvider);
+}
+
 app.Run();

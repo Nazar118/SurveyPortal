@@ -45,6 +45,11 @@ namespace SurveyPortal.API.Controllers
             // Kullanıcıyı veri tabanına şifresiyle beraber (şifreleyerek) kaydetme
             var result = await _userManager.CreateAsync(user, registerDto.Password);
 
+            if (result.Succeeded)
+            {
+                await _userManager.AddToRoleAsync(user, "User");
+            }
+
             if (!result.Succeeded)
             {
                 // Şifre kurallarına uyulmadıysa 
