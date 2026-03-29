@@ -21,8 +21,7 @@ namespace SurveyPortal.API.Services
 
         public async Task<IEnumerable<QuestionDto>> GetQuestionsBySurveyIdAsync(int surveyId)
         {
-            // Belirli bir ankete ait soruları filtrele ve sırala
-            var questions = await _repository.Where(q => q.SurveyId == surveyId)
+            var questions = await _repository.Where(q => q.SurveyId == surveyId && q.IsDeleted == false)
                                              .OrderBy(q => q.OrderNumber)
                                              .ToListAsync();
 
@@ -43,9 +42,12 @@ namespace SurveyPortal.API.Services
         public async Task DeleteQuestionAsync(int id)
         {
             var question = await _repository.GetByIdAsync(id);
-            if (question != null)
+            if (question != null && !question.IsDeleted)
             {
-                _repository.Remove(question);
+                question.IsDeleted = true;
+                question.UpdatedDate = DateTime.Now;
+
+                _repository.Update(question); 
                 await _unitOfWork.CommitAsync();
             }
         }

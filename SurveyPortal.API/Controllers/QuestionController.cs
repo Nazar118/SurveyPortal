@@ -23,7 +23,7 @@ namespace SurveyPortal.API.Controllers
             return Ok(questions);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Create(QuestionDto questionDto)
         {
@@ -31,12 +31,12 @@ namespace SurveyPortal.API.Controllers
             return Ok(newQuestion);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             await _questionService.DeleteQuestionAsync(id);
-            return Ok(new { Message = "Soru başarıyla silindi." });
+            return Ok(new { Message = "Soru başarıyla silindi (Soft Delete uygulandı)." });
         }
     }
 }

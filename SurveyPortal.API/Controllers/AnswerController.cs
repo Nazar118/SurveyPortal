@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore; 
 using SurveyPortal.API.DTOs;
 using SurveyPortal.API.Models;
 using SurveyPortal.API.Repositories.Interfaces;
@@ -10,7 +11,7 @@ namespace SurveyPortal.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] 
+    [Authorize] // Sadece giriş yapanlar anket çözebilir
     public class AnswerController : ControllerBase
     {
         private readonly IAnswerService _answerService;
@@ -30,19 +31,30 @@ namespace SurveyPortal.API.Controllers
             // 1. JWT Token içerisinden, giriş yapan kullanıcının ID'sini yakalıyoruz
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized("Geçersiz kullanıcı kimliği.");
+
+            var hasAnswered = await _surveyResponseRepository
+                .Where(r => r.SurveyId == surveyId && r.AppUserId == userId)
+                .AnyAsync();
+
+            if (hasAnswered)
+            {
+                return BadRequest(new { Message = "Bu anketi daha önce çözdünüz! Bir ankete sadece bir kez katılabilirsiniz." });
+            }
+
             var surveyResponse = new SurveyResponse
             {
                 SurveyId = surveyId,
                 AppUserId = userId,
                 StartedAt = DateTime.Now,
-                IsCompleted = true, 
+                IsCompleted = true,
                 CreatedDate = DateTime.Now
             };
 
             await _surveyResponseRepository.AddAsync(surveyResponse);
-            await _unitOfWork.CommitAsync(); 
+            await _unitOfWork.CommitAsync();
 
-            // 3. Oluşan bu oturumun ID'sini kullanarak, kullanıcının gönderdiği tüm cevapları kaydediyoruz
             await _answerService.SaveAnswersAsync(surveyResponse.Id, answersDto);
 
             return Ok(new { Message = "Cevaplarınız başarıyla kaydedildi. Katılımınız için teşekkürler!" });

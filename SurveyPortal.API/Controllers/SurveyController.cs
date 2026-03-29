@@ -28,12 +28,12 @@ namespace SurveyPortal.API.Controllers
         {
             var survey = await _surveyService.GetSurveyByIdAsync(id);
             if (survey == null)
-                return NotFound("Aradığınız anket bulunamadı.");
+                return NotFound("Aradığınız anket bulunamadı veya silinmiş.");
 
             return Ok(survey);
         }
 
-        [Authorize] 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public async Task<IActionResult> Create(SurveyDto surveyDto)
         {
@@ -41,7 +41,7 @@ namespace SurveyPortal.API.Controllers
             return Ok(newSurvey);
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, SurveyDto surveyDto)
         {
@@ -49,12 +49,12 @@ namespace SurveyPortal.API.Controllers
             return Ok(new { Message = "Anket başarıyla güncellendi." });
         }
 
-        [Authorize]
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
             await _surveyService.DeleteSurveyAsync(id);
-            return Ok(new { Message = "Anket başarıyla silindi." });
+            return Ok(new { Message = "Anket başarıyla silindi (Soft Delete uygulandı)." });
         }
     }
 }
