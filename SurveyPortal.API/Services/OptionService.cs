@@ -52,5 +52,18 @@ namespace SurveyPortal.API.Services
                 await _unitOfWork.CommitAsync();
             }
         }
+        public async Task UpdateOptionAsync(int id, OptionDto optionDto)
+        {
+            var option = await _repository.GetByIdAsync(id);
+            if (option != null && !option.IsDeleted)
+            {
+                option.OptionText = optionDto.OptionText;
+                option.OrderNumber = optionDto.OrderNumber;
+                option.UpdatedDate = DateTime.Now;
+
+                _repository.Update(option);
+                await _unitOfWork.CommitAsync();
+            }
+        }
     }
 }

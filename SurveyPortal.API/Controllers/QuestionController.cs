@@ -38,5 +38,12 @@ namespace SurveyPortal.API.Controllers
             await _questionService.DeleteQuestionAsync(id);
             return Ok(new { Message = "Soru başarıyla silindi (Soft Delete uygulandı)." });
         }
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, QuestionDto questionDto)
+        {
+            await _questionService.UpdateQuestionAsync(id, questionDto);
+            return Ok(new { Message = "Soru başarıyla güncellendi." });
+        }
     }
 }

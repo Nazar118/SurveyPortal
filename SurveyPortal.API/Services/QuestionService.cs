@@ -51,5 +51,20 @@ namespace SurveyPortal.API.Services
                 await _unitOfWork.CommitAsync();
             }
         }
+        public async Task UpdateQuestionAsync(int id, QuestionDto questionDto)
+        {
+            var question = await _repository.GetByIdAsync(id);
+            if (question != null && !question.IsDeleted)
+            {
+                question.QuestionText = questionDto.QuestionText;
+                question.OrderNumber = questionDto.OrderNumber;
+                question.IsRequired = questionDto.IsRequired;
+                question.QuestionType = questionDto.QuestionType;
+                question.UpdatedDate = DateTime.Now;
+
+                _repository.Update(question);
+                await _unitOfWork.CommitAsync();
+            }
+        }
     }
 }

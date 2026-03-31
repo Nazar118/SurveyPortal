@@ -22,6 +22,7 @@ builder.Services.AddScoped<SurveyPortal.API.Services.ISurveyService, SurveyPorta
 builder.Services.AddScoped<SurveyPortal.API.Services.IQuestionService, SurveyPortal.API.Services.QuestionService>();
 builder.Services.AddScoped<SurveyPortal.API.Services.IAnswerService, SurveyPortal.API.Services.AnswerService>();
 builder.Services.AddScoped<SurveyPortal.API.Services.IOptionService, SurveyPortal.API.Services.OptionService>();
+builder.Services.AddScoped<SurveyPortal.API.Services.IResultService, SurveyPortal.API.Services.ResultService>();
 builder.Services.AddScoped<SurveyPortal.API.Helpers.JwtTokenGenerator>();
 
 builder.Services.AddAutoMapper(config =>

@@ -39,5 +39,30 @@ namespace SurveyPortal.API.Controllers
             await _unitOfWork.CommitAsync();
             return Ok("Kategori başarıyla eklendi.");
         }
+        [Authorize(Roles = "Admin")]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, CategoryDto categoryDto)
+        {
+            var category = await _repository.GetByIdAsync(id);
+            if (category == null) return NotFound("Güncellenecek kategori bulunamadı.");
+
+            category.Name = categoryDto.Name;
+
+            _repository.Update(category);
+            await _unitOfWork.CommitAsync();
+            return Ok("Kategori başarıyla güncellendi.");
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var category = await _repository.GetByIdAsync(id);
+            if (category == null) return NotFound("Silinecek kategori bulunamadı.");
+
+            _repository.Remove(category);
+            await _unitOfWork.CommitAsync();
+            return Ok("Kategori başarıyla silindi.");
+        }
     }
 }
