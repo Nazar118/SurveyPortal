@@ -3,12 +3,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SurveyPortal.API.Models;
-using Microsoft.EntityFrameworkCore; // SQL Server ve EF Core için
+using Microsoft.EntityFrameworkCore; 
 using Microsoft.Extensions.DependencyInjection;
-using SurveyPortal.API.Data;          // AppDbContext sýnýfýna eriþmek için
+using SurveyPortal.API.Data;          
 using SurveyPortal.API.Repositories.Concrete;
 using SurveyPortal.API.Repositories.Interfaces;
-using Microsoft.OpenApi.Models; // EKLENDÝ: Swagger Kilit butonu için gerekli kütüphane
+using Microsoft.OpenApi.Models; //  Swagger Kilit butonu için gerekli kütüphane
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,9 +34,9 @@ builder.Services.AddAutoMapper(config =>
 builder.Services.AddIdentity<AppUser, AppRole>(options =>
 {
     options.Password.RequireDigit = true; // Þifrede rakam zorunlu
-    options.Password.RequireLowercase = true; // Þifrede küçük harf zorunlu
-    options.Password.RequireUppercase = true; // Þifrede büyük harf zorunlu
-    options.Password.RequiredLength = 6; // Minimum 6 karakter
+    options.Password.RequireLowercase = true; 
+    options.Password.RequireUppercase = true; 
+    options.Password.RequiredLength = 6; 
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
