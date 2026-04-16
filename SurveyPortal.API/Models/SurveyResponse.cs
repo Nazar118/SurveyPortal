@@ -11,8 +11,6 @@
         public int SurveyId { get; set; }
         public Survey? Survey { get; set; } // Hangi anket dolduruluyor?
 
-        public string? UserId { get; set; } 
-
         public ICollection<Answer>? Answers { get; set; }
         public string? AppUserId { get; set; }
         public AppUser? AppUser { get; set; }
