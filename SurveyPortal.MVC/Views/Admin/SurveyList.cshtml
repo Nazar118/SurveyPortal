@@ -17,7 +17,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h4 class="card-title m-0">Kayıtlı Anketler</h4>
-                    <button class="btn btn-gradient-success btn-sm font-weight-bold">
+                    <button class="btn btn-gradient-success btn-sm font-weight-bold" data-bs-toggle="modal" data-bs-target="#addSurveyModal">
                         <i class="mdi mdi-plus"></i> Yeni Anket Ekle
                     </button>
                 </div>
@@ -28,13 +28,14 @@
                             <tr class="bg-light">
                                 <th>#</th>
                                 <th>Anket Başlığı</th>
+                                <th>Açıklama</th>
                                 <th>Oluşturulma Tarihi</th>
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
                         <tbody id="surveyTableBody">
                             <tr>
-                                <td colspan="4" class="text-center text-muted py-4">
+                                <td colspan="5" class="text-center text-muted py-4">
                                     <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
                                     Veriler yükleniyor...
                                 </td>
@@ -42,6 +43,41 @@
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addSurveyModal" tabindex="-1" role="dialog" aria-labelledby="addSurveyModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-success text-white">
+                <h5 class="modal-title" id="addSurveyModalLabel">Yeni Anket Oluştur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addSurveyForm">
+                    <div class="form-group mb-3">
+                        <label for="surveyTitle" class="font-weight-bold">Anket Başlığı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" id="surveyTitle" placeholder="Örn: Müşteri Memnuniyeti Anketi" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="surveyDescription" class="font-weight-bold">Açıklama</label>
+                        <textarea class="form-control" id="surveyDescription" rows="3" placeholder="Anketin amacı..."></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="categoryId" class="font-weight-bold">Kategori <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-lg" id="categoryId" required>
+                            <option value="">Lütfen Bir Kategori Seçin</option>
+                            <option value="1">Genel (Kategori 1)</option>
+                            <option value="2">Eğitim (Kategori 2)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-gradient-success" id="btnSaveSurvey">Kaydet ve Oluştur</button>
             </div>
         </div>
     </div>
@@ -62,17 +98,19 @@
                     tbody.empty();
 
                     if (data.length === 0) {
-                        tbody.append('<tr><td colspan="4" class="text-center text-muted">Henüz hiç anket bulunmuyor.</td></tr>');
+                        tbody.append('<tr><td colspan="5" class="text-center text-muted">Henüz hiç anket bulunmuyor.</td></tr>');
                         return;
                     }
 
                     $.each(data, function (index, survey) {
                         var date = survey.createdDate ? new Date(survey.createdDate).toLocaleDateString("tr-TR") : "-";
+                        var description = survey.description ? survey.description.substring(0, 30) + (survey.description.length > 30 ? "..." : "") : "-";
 
                         var row = `
                             <tr>
                                 <td>${index + 1}</td>
-                                <td class="font-weight-bold">${survey.title || survey.name || 'İsimsiz Anket'}</td>
+                                <td class="font-weight-bold">${survey.title || 'İsimsiz Anket'}</td>
+                                <td><small class="text-muted">${description}</small></td>
                                 <td>${date}</td>
                                 <td>
                                     <button class="btn btn-sm btn-info btn-icon-text">
@@ -89,24 +127,25 @@
                 },
                 error: function (xhr) {
                     console.error("Anketler yüklenemedi", xhr);
-                    $("#surveyTableBody").html('<tr><td colspan="4" class="text-center text-danger">Veriler çekilirken bir hata oluştu!</td></tr>');
+                    $("#surveyTableBody").html('<tr><td colspan="5" class="text-center text-danger">Veriler çekilirken bir hata oluştu!</td></tr>');
                 }
             });
         }
+
         function deleteSurvey(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
                 text: "Bu anketi silerseniz içindeki sorular da gidebilir!",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#d33', 
-                cancelButtonColor: '#b66dff', 
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#b66dff',
                 confirmButtonText: 'Evet, Sil!',
                 cancelButtonText: 'İptal'
             }).then((result) => {
                 if (result.isConfirmed) {
                     $.ajax({
-                        url: "https://localhost:7283/api/survey/" + id, 
+                        url: "https://localhost:7283/api/survey/" + id,
                         type: "DELETE",
                         success: function () {
                             Swal.fire({
@@ -127,5 +166,54 @@
                 }
             });
         }
+
+        $("#btnSaveSurvey").click(function () {
+            var titleInput = $("#surveyTitle").val();
+            var descriptionInput = $("#surveyDescription").val();
+            var categoryIdInput = $("#categoryId").val();
+
+            if (!titleInput || !categoryIdInput) {
+                Swal.fire('Uyarı', 'Lütfen Başlık ve Kategori alanlarını doldurunuz!', 'warning');
+                return;
+            }
+
+            var surveyData = {
+                title: titleInput,
+                description: descriptionInput,
+                categoryId: parseInt(categoryIdInput),
+                isActive: true,
+                isPublished: false,
+                isAnonymous: false,
+                createdDate: new Date().toISOString()
+            };
+
+            $.ajax({
+                url: "https://localhost:7283/api/survey",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(surveyData),
+                success: function () {
+                    $("#addSurveyModal").modal('hide');
+                    // Formu temizle
+                    $("#surveyTitle").val("");
+                    $("#surveyDescription").val("");
+                    $("#categoryId").val("");
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Harika!',
+                        text: 'Yeni anket başarıyla oluşturuldu.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    loadSurveys();
+                },
+                error: function (xhr) {
+                    console.error("Ekleme hatası detayları:", xhr.responseText);
+                    Swal.fire('Hata!', 'Anket oluşturulurken bir sorun yaşandı.', 'error');
+                }
+            });
+        });
     </script>
 }

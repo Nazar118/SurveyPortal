@@ -7,5 +7,6 @@
         public string? Description { get; set; } //Tanım
         public bool IsActive { get; set; }
         public int CategoryId { get; set; }
+        public DateTime CreatedDate { get; set; }
     }
 }
