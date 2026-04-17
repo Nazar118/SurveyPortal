@@ -8,5 +8,10 @@ namespace SurveyPortal.MVC.Controllers
         {
             return View();
         }
+
+        public IActionResult SurveyList()
+        {
+            return View();
+        }
     }
 }

@@ -1,0 +1,131 @@
+﻿@{
+    ViewData["Title"] = "Anket Listesi";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="page-header">
+    <h3 class="page-title">
+        <span class="page-title-icon bg-gradient-primary text-white me-2">
+            <i class="mdi mdi-format-list-bulleted"></i>
+        </span> Anket Listesi
+    </h3>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 grid-margin stretch-card">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title m-0">Kayıtlı Anketler</h4>
+                    <button class="btn btn-gradient-success btn-sm font-weight-bold">
+                        <i class="mdi mdi-plus"></i> Yeni Anket Ekle
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr class="bg-light">
+                                <th>#</th>
+                                <th>Anket Başlığı</th>
+                                <th>Oluşturulma Tarihi</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="surveyTableBody">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                                    Veriler yükleniyor...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadSurveys();
+        });
+
+        function loadSurveys() {
+            $.ajax({
+                url: "https://localhost:7283/api/survey",
+                type: "GET",
+                success: function (data) {
+                    var tbody = $("#surveyTableBody");
+                    tbody.empty();
+
+                    if (data.length === 0) {
+                        tbody.append('<tr><td colspan="4" class="text-center text-muted">Henüz hiç anket bulunmuyor.</td></tr>');
+                        return;
+                    }
+
+                    $.each(data, function (index, survey) {
+                        var date = survey.createdDate ? new Date(survey.createdDate).toLocaleDateString("tr-TR") : "-";
+
+                        var row = `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td class="font-weight-bold">${survey.title || survey.name || 'İsimsiz Anket'}</td>
+                                <td>${date}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-info btn-icon-text">
+                                        <i class="mdi mdi-eye btn-icon-prepend"></i> Sorular
+                                    </button>
+                                    <button onclick="deleteSurvey('${survey.id}')" class="btn btn-sm btn-danger btn-icon-text">
+                                        <i class="mdi mdi-delete btn-icon-prepend"></i> Sil
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                },
+                error: function (xhr) {
+                    console.error("Anketler yüklenemedi", xhr);
+                    $("#surveyTableBody").html('<tr><td colspan="4" class="text-center text-danger">Veriler çekilirken bir hata oluştu!</td></tr>');
+                }
+            });
+        }
+        function deleteSurvey(id) {
+            Swal.fire({
+                title: 'Emin misiniz?',
+                text: "Bu anketi silerseniz içindeki sorular da gidebilir!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33', 
+                cancelButtonColor: '#b66dff', 
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'İptal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "https://localhost:7283/api/survey/" + id, 
+                        type: "DELETE",
+                        success: function () {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Silindi!',
+                                text: 'Anket başarıyla silindi.',
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+
+                            loadSurveys();
+                        },
+                        error: function (xhr) {
+                            console.error("Silme hatası:", xhr);
+                            Swal.fire('Hata!', 'Anket silinirken bir sorun oluştu.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}
