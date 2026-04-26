@@ -25,6 +25,14 @@ namespace SurveyPortal.API.Controllers
             _unitOfWork = unitOfWork;
         }
 
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllResponses()
+        {
+            var allResponses = await _surveyResponseRepository.GetAllAsync();
+            return Ok(allResponses);
+        }
+
         [HttpPost("submit/{surveyId}")]
         public async Task<IActionResult> SubmitAnswers(int surveyId, [FromBody] IEnumerable<AnswerDto> answersDto)
         {

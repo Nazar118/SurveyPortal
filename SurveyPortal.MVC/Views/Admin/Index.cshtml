@@ -7,36 +7,35 @@
     <h3 class="page-title">
         <span class="page-title-icon bg-gradient-primary text-white me-2">
             <i class="mdi mdi-home"></i>
-        </span> Dashboard
+        </span> Yönetici Paneli
     </h3>
 </div>
 
 <div class="row">
     <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-gradient-danger card-img-holder text-white shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="font-weight-normal mb-2">Toplam Anket <i class="mdi mdi-chart-line mdi-24px float-right"></i></h4>
-                <h2 class="mb-2" id="surveyCount">Yükleniyor...</h2> <h6 class="card-text text-white-50" style="font-size: 0.85rem;">Sistemde kayıtlı aktif anketler</h6>
+        <div class="card bg-gradient-danger card-img-holder text-white shadow">
+            <div class="card-body">
+                <h4 class="font-weight-normal mb-3">Toplam Anket <i class="mdi mdi-chart-line mdi-24px float-right"></i></h4>
+                <h2 class="mb-5" id="dashSurveys">Yükleniyor...</h2>
+                <h6 class="card-text">Sistemde kayıtlı anketler</h6>
             </div>
         </div>
     </div>
-
     <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-gradient-info card-img-holder text-white shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="font-weight-normal mb-2">Toplam Soru <i class="mdi mdi-bookmark-outline mdi-24px float-right"></i></h4>
-                <h2 class="mb-2" id="questionCount">Yükleniyor...</h2>
-                <h6 class="card-text text-white-50" style="font-size: 0.85rem;">Anketlere eklenen tüm sorular</h6>
+        <div class="card bg-gradient-info card-img-holder text-white shadow">
+            <div class="card-body">
+                <h4 class="font-weight-normal mb-3">Toplam Soru <i class="mdi mdi-bookmark-outline mdi-24px float-right"></i></h4>
+                <h2 class="mb-5" id="dashQuestions">0</h2>
+                <h6 class="card-text">API entegrasyonu bekleniyor</h6>
             </div>
         </div>
     </div>
-
     <div class="col-md-4 stretch-card grid-margin">
-        <div class="card bg-gradient-success card-img-holder text-white shadow-sm">
-            <div class="card-body p-4">
-                <h4 class="font-weight-normal mb-2">Çözülme Sayısı <i class="mdi mdi-diamond mdi-24px float-right"></i></h4>
-                <h2 class="mb-2" id="responseCount">Yükleniyor...</h2>
-                <h6 class="card-text text-white-50" style="font-size: 0.85rem;">Kullanıcıların verdiği toplam yanıt</h6>
+        <div class="card bg-gradient-success card-img-holder text-white shadow">
+            <div class="card-body">
+                <h4 class="font-weight-normal mb-3">Çözülme Sayısı <i class="mdi mdi-diamond mdi-24px float-right"></i></h4>
+                <h2 class="mb-5" id="dashResponses">0</h2>
+                <h6 class="card-text">API entegrasyonu bekleniyor</h6>
             </div>
         </div>
     </div>
@@ -44,16 +43,16 @@
 
 @section Scripts {
     <script>
-                $(document).ready(function () {
+        $(document).ready(function () {
 
             $.ajax({
                 url: "https://localhost:7283/api/survey",
                 type: "GET",
                 success: function (data) {
-                    $("#surveyCount").hide().text(data.length || 0).fadeIn("slow");
+                    $("#dashSurveys").text(data.length);
                 },
                 error: function () {
-                    $("#surveyCount").text("0");
+                    $("#dashSurveys").text("Hata");
                 }
             });
 
@@ -61,23 +60,25 @@
                 url: "https://localhost:7283/api/question",
                 type: "GET",
                 success: function (data) {
-                    $("#questionCount").hide().text(data.length || 0).fadeIn("slow");
+                    $("#dashQuestions").text(data.length);
+                    $("#dashQuestions").next("h6").text("Anketlere eklenen tüm sorular");
                 },
-                error: function (xhr) {
-                    console.error("Soru API hatası:", xhr);
-                    $("#questionCount").text("0");
+                error: function () {
+                    $("#dashQuestions").text("?");
+                    $("#dashQuestions").next("h6").text("API metodunuz kontrol edilmeli");
                 }
             });
 
             $.ajax({
-                url: "https://localhost:7283/api/surveyresponse",
+                url: "https://localhost:7283/api/answer", 
                 type: "GET",
                 success: function (data) {
-                    $("#responseCount").hide().text(data.length || 0).fadeIn("slow");
+                    $("#dashResponses").text(data.length);
+                    $("#dashResponses").next("h6").text("Kullanıcıların verdiği toplam yanıt");
                 },
-                error: function (xhr) {
-                    console.error("Yanıt API hatası:", xhr);
-                    $("#responseCount").text("0");
+                error: function () {
+                    $("#dashResponses").text("?");
+                    $("#dashResponses").next("h6").text("API metodunuz kontrol edilmeli");
                 }
             });
 

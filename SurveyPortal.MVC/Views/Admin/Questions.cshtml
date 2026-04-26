@@ -1,0 +1,352 @@
+﻿@{
+    ViewData["Title"] = "Anket Soruları";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h3 class="page-title">
+        <span class="page-title-icon bg-gradient-info text-white me-2">
+            <i class="mdi mdi-help-circle-outline"></i>
+        </span> Soru Yönetimi
+    </h3>
+    <a href="/Admin/SurveyList" class="btn btn-secondary btn-sm"><i class="mdi mdi-arrow-left"></i> Anketlere Dön</a>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 grid-margin stretch-card">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title m-0">Anket ID: <span class="text-primary" id="currentSurveyId">@ViewBag.SurveyId</span> - Kayıtlı Sorular</h4>
+
+                    <button class="btn btn-gradient-info btn-sm font-weight-bold" data-bs-toggle="modal" data-bs-target="#addQuestionModal">
+                        <i class="mdi mdi-plus"></i> Yeni Soru Ekle
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr class="bg-light">
+                                <th>#</th>
+                                <th>Soru Metni</th>
+                                <th>Soru Tipi</th>
+                                <th>Zorunlu Mu?</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="questionTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <div class="spinner-border text-info spinner-border-sm" role="status"></div>
+                                    Sorular yükleniyor...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addQuestionModal" tabindex="-1" role="dialog" aria-labelledby="addQuestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-info text-white">
+                <h5 class="modal-title" id="addQuestionModalLabel">Yeni Soru Oluştur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addQuestionForm">
+                    <div class="form-group mb-3">
+                        <label for="questionText" class="font-weight-bold">Soru Metni <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="questionText" rows="3" placeholder="Örn: Hizmetimizden ne kadar memnun kaldınız?" required></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="questionType" class="font-weight-bold">Soru Tipi <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-lg" id="questionType" required>
+                            <option value="">Lütfen Tip Seçin</option>
+                            <option value="0">Kısa Metin (Text)</option>
+                            <option value="1">Çoktan Seçmeli (Radio)</option>
+                            <option value="2">Çoklu Seçim (Checkbox)</option>
+                        </select>
+                    </div>
+                    <div class="form-check form-check-info">
+                        <label class="form-check-label font-weight-bold">
+                            <input type="checkbox" class="form-check-input" id="isRequired" checked>
+                            Bu soruyu cevaplamak zorunlu olsun mu?
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-gradient-info" id="btnSaveQuestion">Kaydet</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="optionsModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content border-0">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title font-weight-bold"><i class="mdi mdi-format-list-bulleted"></i> Soru Şıklarını Yönet</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="currentQuestionIdForOptions" />
+
+                <h6 class="font-weight-bold text-muted mb-3">Mevcut Şıklar:</h6>
+                <ul class="list-group mb-4 shadow-sm" id="optionsList">
+                    <li class="list-group-item text-muted text-center">Yükleniyor...</li>
+                </ul>
+
+                <hr class="mb-4" />
+
+                <div class="form-group mb-0">
+                    <label class="font-weight-bold text-muted">Yeni Şık Ekle</label>
+                    <div class="input-group">
+                        <input type="text" class="form-control form-control-lg" id="newOptionText" placeholder="Örn: Kesinlikle Katılıyorum">
+                        <button class="btn btn-gradient-primary font-weight-bold px-4" type="button" id="btnSaveOption">
+                            <i class="mdi mdi-plus"></i> Ekle
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var currentSurveyId = parseInt($("#currentSurveyId").text());
+
+        $(document).ready(function () {
+            loadQuestions();
+        });
+
+        function loadQuestions() {
+            $.ajax({
+                url: "https://localhost:7283/api/question/survey/" + currentSurveyId,
+                type: "GET",
+                success: function (data) {
+                    var tbody = $("#questionTableBody");
+                    tbody.empty();
+
+                    if (data.length === 0) {
+                        tbody.append('<tr><td colspan="5" class="text-center text-muted py-4">Bu ankete henüz soru eklenmemiş. İlk soruyu sen ekle!</td></tr>');
+                        return;
+                    }
+
+                    data.sort((a, b) => a.orderNumber - b.orderNumber);
+
+                    $.each(data, function (index, q) {
+                        var typeText = "Bilinmiyor";
+                        if (q.questionType === 0) typeText = '<span class="badge badge-info">Metin</span>';
+                        if (q.questionType === 1) typeText = '<span class="badge badge-warning">Tek Seçim</span>';
+                        if (q.questionType === 2) typeText = '<span class="badge badge-success">Çoklu Seçim</span>';
+
+                        var requiredBadge = q.isRequired
+                            ? '<span class="badge badge-danger">Evet</span>'
+                            : '<span class="badge badge-secondary">Hayır</span>';
+
+                        var actionButtons = `
+                            <button onclick="deleteQuestion('${q.id}')" class="btn btn-sm btn-danger" title="Soruyu Sil">
+                                <i class="mdi mdi-delete"></i> Sil
+                            </button>
+                        `;
+
+                        if (q.questionType === 1 || q.questionType === 2) {
+                            actionButtons = `
+                                <button onclick="openOptionsModal('${q.id}')" class="btn btn-sm btn-warning me-2 text-dark font-weight-bold" title="Şıkları Yönet">
+                                    <i class="mdi mdi-format-list-bulleted"></i> Şıklar
+                                </button>
+                            ` + actionButtons;
+                        }
+                        var row = `
+                            <tr>
+                                <td>${q.orderNumber || index + 1}</td>
+                                <td class="font-weight-bold">${q.questionText}</td>
+                                <td>${typeText}</td>
+                                <td>${requiredBadge}</td>
+                                <td>${actionButtons}</td> </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                },
+                error: function (xhr) {
+                    console.error("Sorular yüklenemedi:", xhr);
+                    $("#questionTableBody").html('<tr><td colspan="5" class="text-center text-danger">Sorular çekilirken bir hata oluştu!</td></tr>');
+                }
+            });
+        }
+
+        $("#btnSaveQuestion").click(function () {
+            var textInput = $("#questionText").val();
+            var typeInput = $("#questionType").val();
+            var isRequiredInput = $("#isRequired").is(":checked");
+
+            if (!textInput || typeInput === "") {
+                Swal.fire('Uyarı', 'Lütfen soru metni ve tipini doldurunuz!', 'warning');
+                return;
+            }
+
+            var nextOrderNumber = $("#questionTableBody tr").length + 1;
+            if ($("#questionTableBody tr td").hasClass("text-muted")) {
+                nextOrderNumber = 1;
+            }
+
+            var questionData = {
+                questionText: textInput,
+                questionType: parseInt(typeInput),
+                isRequired: isRequiredInput,
+                surveyId: currentSurveyId,
+                orderNumber: nextOrderNumber
+            };
+
+            $.ajax({
+                url: "https://localhost:7283/api/question",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(questionData),
+                success: function () {
+                    $("#addQuestionModal").modal('hide');
+                    $("#addQuestionForm")[0].reset();
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Eklendi!',
+                        text: 'Soru başarıyla ankete dahil edildi.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+
+                    loadQuestions();
+                },
+                error: function (xhr) {
+                    console.error("Ekleme hatası:", xhr);
+                    Swal.fire('Hata!', 'Soru eklenirken bir sorun yaşandı.', 'error');
+                }
+            });
+        });
+
+        function deleteQuestion(id) {
+            Swal.fire({
+                title: 'Soruyu Sil',
+                text: "Bu soruyu silmek istediğinize emin misiniz?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#b66dff',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'İptal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "https://localhost:7283/api/question/" + id,
+                        type: "DELETE",
+                        success: function () {
+                            Swal.fire({ icon: 'success', title: 'Silindi!', timer: 1500, showConfirmButton: false });
+                            loadQuestions();
+                        },
+                        error: function (xhr) {
+                            Swal.fire('Hata!', 'Soru silinemedi.', 'error');
+                        }
+                    });
+                }
+            });
+        }
+
+        function openOptionsModal(questionId) {
+            $("#currentQuestionIdForOptions").val(questionId); 
+            $("#newOptionText").val(""); 
+            $("#optionsModal").modal('show'); 
+
+            loadOptions(questionId); 
+        }
+
+        function loadOptions(questionId) {
+            $.ajax({
+                url: "https://localhost:7283/api/option/question/" + questionId,
+                type: "GET",
+                success: function (data) {
+                    var list = $("#optionsList");
+                    list.empty();
+
+                    if (data.length === 0) {
+                        list.append('<li class="list-group-item text-muted text-center">Bu soruya henüz şık eklenmemiş.</li>');
+                        return;
+                    }
+
+                    data.sort((a, b) => a.orderNumber - b.orderNumber);
+
+                    $.each(data, function (index, opt) {
+                        var li = `
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span><strong class="text-primary me-2">${index + 1}.</strong> ${opt.optionText}</span>
+                                <button class="btn btn-sm btn-outline-danger btn-icon" onclick="deleteOption('${opt.id}', '${questionId}')">
+                                    <i class="mdi mdi-delete"></i>
+                                </button>
+                            </li>
+                        `;
+                        list.append(li);
+                    });
+                },
+                error: function (xhr) {
+                    console.error("Şıklar çekilemedi", xhr);
+                    $("#optionsList").html('<li class="list-group-item text-danger text-center">Şıklar yüklenirken hata oluştu!</li>');
+                }
+            });
+        }
+
+        $("#btnSaveOption").click(function () {
+            var text = $("#newOptionText").val();
+            var qId = $("#currentQuestionIdForOptions").val();
+
+            if (!text) {
+                Swal.fire('Uyarı', 'Lütfen bir şık metni yazın!', 'warning');
+                return;
+            }
+
+            var nextOrder = $("#optionsList li").length + 1;
+            if ($("#optionsList li").hasClass("text-muted")) nextOrder = 1;
+
+            var optionData = {
+                optionText: text,
+                questionId: parseInt(qId),
+                orderNumber: nextOrder
+            };
+
+            $.ajax({
+                url: "https://localhost:7283/api/option",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(optionData),
+                success: function () {
+                    $("#newOptionText").val(""); 
+                    loadOptions(qId); 
+                },
+                error: function (xhr) {
+                    console.error("Şık eklenemedi", xhr);
+                    Swal.fire('Hata!', 'Şık eklenirken bir sorun oluştu.', 'error');
+                }
+            });
+        });
+
+        function deleteOption(optId, qId) {
+            $.ajax({
+                url: "https://localhost:7283/api/option/" + optId,
+                type: "DELETE",
+                success: function () {
+                    loadOptions(qId); 
+                },
+                error: function (xhr) {
+                    console.error("Şık silinemedi", xhr);
+                    Swal.fire('Hata!', 'Şık silinemedi.', 'error');
+                }
+            });
+        }
+    </script>
+}

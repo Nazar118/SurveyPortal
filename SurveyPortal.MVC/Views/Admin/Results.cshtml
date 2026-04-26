@@ -1,0 +1,125 @@
+﻿@{
+    ViewData["Title"] = "Anket Sonuçları";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <h3 class="page-title text-primary font-weight-bold" id="surveyTitle">
+        <i class="mdi mdi-chart-pie me-2"></i> Sonuçlar Yükleniyor...
+    </h3>
+    <a href="/Admin/Index" class="btn btn-outline-secondary btn-sm">Geri Dön</a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card bg-gradient-info text-white shadow-sm border-0">
+            <div class="card-body text-center py-3">
+                <h4 class="m-0"><i class="mdi mdi-account-group"></i> Toplam Katılım: <span id="totalParticipants" class="font-weight-bold">0</span> Kişi</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row" id="chartsContainer">
+    <div class="col-12 text-center py-5" id="loadingSpinner">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="text-muted mt-2">Veriler analiz ediliyor...</p>
+    </div>
+</div>
+
+<input type="hidden" id="hiddenSurveyId" value="@ViewBag.SurveyId" />
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        var currentSurveyId = $("#hiddenSurveyId").val();
+
+        $(document).ready(function () {
+            loadResults();
+        });
+
+        function loadResults() {
+            $.ajax({
+                url: "https://localhost:7283/api/result/" + currentSurveyId,
+                type: "GET",
+                success: function (res) {
+                    $("#loadingSpinner").remove();
+                    $("#surveyTitle").html(`<i class="mdi mdi-chart-pie me-2"></i> ${res.surveyTitle} - Analiz`);
+                    $("#totalParticipants").text(res.totalParticipants);
+
+                    var container = $("#chartsContainer");
+
+                    if (res.questions.length === 0) {
+                        container.html('<div class="col-12"><div class="alert alert-warning text-center">Bu ankete henüz yanıt verilmemiş veya soru eklenmemiş.</div></div>');
+                        return;
+                    }
+
+                    // Her bir soru için kart ve grafik (Canvas) oluştur
+                    $.each(res.questions, function (index, q) {
+                        // Sadece şıklı soruların grafiği çizilebilir
+                        if (q.options && q.options.length > 0) {
+                            var canvasId = `chart_q_${q.questionId}`;
+
+                            var cardHtml = `
+                                <div class="col-md-6 grid-margin stretch-card">
+                                    <div class="card shadow-sm border-0">
+                                        <div class="card-body">
+                                            <h5 class="card-title text-dark font-weight-bold mb-4">${index + 1}. ${q.questionText}</h5>
+                                            <p class="text-muted small">Bu soruya ${q.totalAnswers} yanıt verilmiş.</p>
+                                            <canvas id="${canvasId}" style="max-height: 250px;"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            container.append(cardHtml);
+
+                            var labels = q.options.map(o => o.optionText + " (% " + o.percentage + ")");
+                            var data = q.options.map(o => o.voteCount);
+
+                            // Renk Paleti
+                            var colors = ['#b66dff', '#4facfe', '#00f2fe', '#f83600', '#f9d423', '#1d976c'];
+
+                            // Chart.js Çizimi
+                            var ctx = document.getElementById(canvasId).getContext('2d');
+                            new Chart(ctx, {
+                                type: 'doughnut', // 'pie' veya 'bar' da yapabilirsin
+                                data: {
+                                    labels: labels,
+                                    datasets: [{
+                                        data: data,
+                                        backgroundColor: colors,
+                                        borderWidth: 0
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { position: 'right' }
+                                    }
+                                }
+                            });
+                        } else {
+                            // Metin soruları için liste görünümü
+                            var textHtml = `
+                                <div class="col-md-6 grid-margin stretch-card">
+                                    <div class="card shadow-sm border-0">
+                                        <div class="card-body">
+                                            <h5 class="card-title text-dark font-weight-bold mb-4">${index + 1}. ${q.questionText}</h5>
+                                            <div class="alert alert-info py-2">Bu bir metin sorusudur. Metin yanıtları detay raporundan incelenebilir.</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                            container.append(textHtml);
+                        }
+                    });
+                },
+                error: function (xhr) {
+                    $("#loadingSpinner").html('<div class="alert alert-danger text-center">Sonuçlar yüklenirken bir hata oluştu.</div>');
+                }
+            });
+        }
+    </script>
+}

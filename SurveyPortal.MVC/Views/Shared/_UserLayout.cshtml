@@ -1,0 +1,67 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SurveyPortal</title>
+    <link rel="stylesheet" href="~/assets/vendors/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="~/assets/vendors/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="~/assets/css/style.css">
+    <style>
+        body { background-color: #f4f7fa; }
+        .navbar.user-navbar { background: linear-gradient(to right, #b66dff, #4facfe); }
+        .navbar.user-navbar .navbar-brand, .navbar.user-navbar .nav-link { color: white !important; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav class="navbar user-navbar col-lg-12 col-12 p-0 fixed-top d-flex flex-row shadow-sm">
+        <div class="container d-flex justify-content-between align-items-center py-3">
+            <a class="navbar-brand text-white" href="/Home/Index">
+                <i class="mdi mdi-poll-box"></i> SurveyPortal
+            </a>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="/Auth/Login"><i class="mdi mdi-login"></i> Admin Girişi</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 100px; min-height: 75vh;">
+        @RenderBody()
+    </div>
+
+    <footer class="footer mt-5 bg-white shadow-sm border-top">
+        <div class="container text-center py-3">
+            <span class="text-muted">© 2026 SurveyPortal. Tüm hakları saklıdır.</span>
+        </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/site.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+
+    <script>
+        $.ajaxSetup({
+            beforeSend: function (xhr) {
+                var token = localStorage.getItem("token");
+                if (token) {
+                    xhr.setRequestHeader("Authorization", "Bearer " + token);
+                }
+            },
+            error: function (jqXHR) {
+                if (jqXHR.status === 401) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Oturum Gerekli!',
+                        text: 'Anketi gönderebilmek için giriş yapmalısınız.'
+                    }).then(() => {
+                        window.location.href = "/Auth/Login";
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

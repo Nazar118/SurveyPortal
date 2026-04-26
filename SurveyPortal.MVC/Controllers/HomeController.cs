@@ -18,6 +18,11 @@ namespace SurveyPortal.MVC.Controllers
             return View();
         }
 
+        public IActionResult SurveyDetail(int id)
+        {
+            ViewBag.SurveyId = id;
+            return View();
+        }
         public IActionResult Privacy()
         {
             return View();

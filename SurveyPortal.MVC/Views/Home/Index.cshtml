@@ -1,79 +1,78 @@
 ﻿@{
-    ViewData["Title"] = "Giriş Yap";
+    ViewData["Title"] = "Anketler";
+    Layout = "~/Views/Shared/_UserLayout.cshtml";
 }
 
-<div class="row flex-grow w-100">
-    <div class="col-lg-4 mx-auto">
-        <div class="auth-form-light text-left p-5 shadow rounded">
-            <div class="brand-logo mb-4 text-center">
-                <h2 class="text-primary font-weight-bold">SurveyPortal</h2>
-            </div>
-            <h4 class="text-center">Hoş Geldiniz!</h4>
-            <h6 class="font-weight-light text-center mb-4">Devam etmek için lütfen giriş yapın.</h6>
+<div class="text-center mb-5">
+    <h1 class="display-4 font-weight-bold text-primary">Güncel Anketler</h1>
+    <p class="text-muted lead">Fikriniz bizim için değerli. Lütfen aşağıdan katılmak istediğiniz anketi seçin.</p>
+</div>
 
-            <form class="pt-3" id="loginForm">
-                <div class="form-group mb-3">
-                    <input type="text" class="form-control form-control-lg" id="username" placeholder="Kullanıcı Adınız" required>
-                </div>
-                <div class="form-group mb-4">
-                    <input type="password" class="form-control form-control-lg" id="password" placeholder="Şifreniz" required>
-                </div>
-                <div class="mt-3 d-grid gap-2">
-                    <button type="button" id="btnLogin" class="btn btn-block btn-gradient-primary btn-lg font-weight-medium auth-form-btn">
-                        GİRİŞ YAP
-                    </button>
-                </div>
-            </form>
-        </div>
+<div class="row" id="userSurveyList">
+    <div class="col-12 text-center py-5">
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+        <h4 class="mt-3 text-muted">Anketler Yükleniyor...</h4>
     </div>
 </div>
 
 @section Scripts {
     <script>
         $(document).ready(function () {
-            $("#btnLogin").click(function (e) {
-                e.preventDefault();
-
-                var usernameInput = $("#username").val();
-                var passwordInput = $("#password").val();
-
-                if (!usernameInput || !passwordInput) {
-                    alert("Lütfen kullanıcı adı ve şifrenizi giriniz.");
-                    return;
-                }
-
-                $.ajax({
-                    url: "https://localhost:7283/api/auth/login",
-                    type: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify({
-                        userName: usernameInput, 
-                        password: passwordInput
-                    }),
-                    success: function (res) {
-                        localStorage.setItem("token", res.token);
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Giriş Başarılı!',
-                            text: 'Yönetici paneline yönlendiriliyorsunuz...',
-                            showConfirmButton: false, 
-                            timer: 1500 
-                        }).then(function() {
-                            window.location.href = "/Admin/Index";
-                        });
-                    },
-                    error: function (xhr) {
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Giriş Başarısız!',
-                            text: 'Kullanıcı adı veya şifre hatalı.',
-                            confirmButtonColor: '#b66dff' 
-                        });
-                        console.error(xhr);
-                    }
-                });
-            });
+            loadUserSurveys();
         });
+
+        function loadUserSurveys() {
+            $.ajax({
+                url: "https://localhost:7283/api/survey",
+                type: "GET",
+                success: function (data) {
+                    var container = $("#userSurveyList");
+                    container.empty();
+                    var activeSurveys = data;
+
+                    if (activeSurveys.length === 0) {
+                        container.append(`
+                            <div class="col-12 text-center py-5">
+                                <i class="mdi mdi-flask-empty text-muted" style="font-size: 4rem;"></i>
+                                <h3 class="text-muted mt-3">Şu an aktif bir anket bulunmuyor.</h3>
+                            </div>
+                        `);
+                        return;
+                    }
+
+                    $.each(activeSurveys, function (index, survey) {
+                        var desc = survey.description ? survey.description : "Bu anket için henüz bir açıklama girilmemiş.";
+                        var date = survey.createdDate ? new Date(survey.createdDate).toLocaleDateString("tr-TR") : "-";
+
+                        var card = `
+                            <div class="col-md-4 mb-4 stretch-card grid-margin">
+                                <div class="card shadow-sm border-0 h-100" style="transition: transform 0.3s; cursor:pointer;" onmouseover="this.style.transform='scale(1.03)'" onmouseout="this.style.transform='scale(1)'">
+                                    <div class="card-body d-flex flex-column">
+                                        <div class="d-flex justify-content-between align-items-center mb-3">
+                                            <span class="badge badge-info badge-pill">Yeni</span>
+                                            <small class="text-muted"><i class="mdi mdi-calendar"></i> ${date}</small>
+                                        </div>
+                                        <h4 class="card-title text-primary font-weight-bold mb-3">${survey.title}</h4>
+                                        <p class="text-muted mb-4" style="flex-grow: 1;">${desc}</p>
+                                        <button class="btn btn-gradient-primary btn-block btn-lg" onclick="solveSurvey('${survey.id}')">
+                                            Anketi Çöz <i class="mdi mdi-arrow-right ms-2"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.append(card);
+                    });
+                },
+                error: function (xhr) {
+                    console.error("Anketler çekilemedi:", xhr);
+                    $("#userSurveyList").html('<div class="col-12 text-center text-danger"><h3>Bağlantı hatası oluştu!</h3></div>');
+                }
+            });
+        }
+
+        function solveSurvey(id) {
+            window.location.href = '/Home/SurveyDetail/' + id;
+        }
     </script>
 }

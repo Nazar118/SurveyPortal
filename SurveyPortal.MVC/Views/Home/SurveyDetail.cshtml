@@ -1,0 +1,186 @@
+﻿@{
+    ViewData["Title"] = "Anketi Çöz";
+    Layout = "~/Views/Shared/_UserLayout.cshtml";
+}
+
+<div class="row justify-content-center mb-5">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-primary font-weight-bold m-0" id="surveyTitle">Anket Yükleniyor...</h2>
+            <a href="/Home/Index" class="btn btn-sm btn-outline-secondary"><i class="mdi mdi-arrow-left"></i> Geri Dön</a>
+        </div>
+
+        <div id="questionsContainer">
+            <div class="text-center py-5">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="mt-3 text-muted">Sorular hazırlanıyor...</p>
+            </div>
+        </div>
+
+        <div class="text-end mt-4 d-none" id="submitArea">
+            <button class="btn btn-gradient-primary btn-lg font-weight-bold px-5" id="btnSubmitSurvey">
+                <i class="mdi mdi-send"></i> Yanıtlarımı Gönder
+            </button>
+        </div>
+    </div>
+</div>
+
+<input type="hidden" id="hiddenSurveyId" value="@ViewBag.SurveyId" />
+
+@section Scripts {
+    <script>
+        var currentSurveyId = $("#hiddenSurveyId").val();
+
+        $(document).ready(function () {
+            loadSurveyQuestions();
+
+            $("#btnSubmitSurvey").click(function () {
+                var answers = [];
+                var isValid = true;
+
+                $(".question-body").each(function () {
+                    var qBody = $(this);
+                    var qId = qBody.attr("id").replace("q-body-", "");
+                    var qType = qBody.data("type");
+                    var isRequired = qBody.data("required");
+
+                    // Metin Sorusu
+                    if (qType === 0) {
+                        var textVal = qBody.find("textarea").val().trim();
+                        if (isRequired && textVal === "") isValid = false;
+                        if (textVal !== "") {
+                            answers.push({ questionId: parseInt(qId), textAnswer: textVal, optionId: null });
+                        }
+                    }
+                    // Seçmeli Soru
+                    else {
+                        var checkedInputs = qBody.find("input:checked");
+                        if (isRequired && checkedInputs.length === 0) isValid = false;
+
+                        checkedInputs.each(function () {
+                            answers.push({
+                                questionId: parseInt(qId),
+                                optionId: parseInt($(this).val()),
+                                textAnswer: null
+                            });
+                        });
+                    }
+                });
+
+                if (!isValid) {
+                    Swal.fire('Eksik Yanıt!', 'Lütfen yıldızlı (*) tüm zorunlu soruları yanıtlayın.', 'warning');
+                    return;
+                }
+
+                // DÜZELTİLMİŞ AJAX GÖNDERME KODUMUZ BURADA! (C# kodları yerine bu olmalıydı)
+                $.ajax({
+                    url: "https://localhost:7283/api/answer/submit/" + currentSurveyId,
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(answers),
+                    success: function (res) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Teşekkürler!',
+                            text: res.message || 'Anket yanıtlarınız başarıyla kaydedildi.',
+                            confirmButtonText: 'Ana Sayfaya Dön'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = '/Home/Index';
+                            }
+                        });
+                    },
+                    error: function (xhr) {
+                        console.error("Yanıt gönderme hatası:", xhr);
+                        var errorMsg = 'Yanıtlar gönderilirken bir sorun oluştu.';
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMsg = xhr.responseJSON.message;
+                        } else if (xhr.responseText) {
+                            errorMsg = xhr.responseText;
+                        }
+                        Swal.fire('Hata!', errorMsg, 'error');
+                    }
+                });
+            });
+        });
+
+        function loadSurveyQuestions() {
+            $.ajax({
+                url: "https://localhost:7283/api/question/survey/" + currentSurveyId,
+                type: "GET",
+                success: function (questions) {
+                    var container = $("#questionsContainer");
+                    container.empty();
+
+                    if (questions.length === 0) {
+                        container.html('<div class="alert alert-warning text-center">Bu ankette henüz soru bulunmuyor.</div>');
+                        return;
+                    }
+
+                    $("#submitArea").removeClass("d-none");
+                    $("#surveyTitle").text("Anketi Çöz");
+
+                    questions.sort((a, b) => a.orderNumber - b.orderNumber);
+
+                    $.each(questions, function (index, q) {
+                        var isRequiredHtml = q.isRequired ? '<span class="text-danger ms-1">*</span>' : '';
+
+                        var questionCard = `
+                            <div class="card shadow-sm mb-4 border-0">
+                                <div class="card-body p-4">
+                                    <h5 class="font-weight-bold mb-3">${index + 1}. ${q.questionText} ${isRequiredHtml}</h5>
+                                    <div class="question-body" id="q-body-${q.id}" data-type="${q.questionType}" data-required="${q.isRequired}">
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        container.append(questionCard);
+
+                        var qBody = $("#q-body-" + q.id);
+
+                        if (q.questionType === 0) {
+                            qBody.html(`<textarea class="form-control" rows="3" placeholder="Yanıtınızı buraya yazın..."></textarea>`);
+                        }
+                        else {
+                            qBody.html('<small class="text-muted spinner-text"><i class="mdi mdi-loading mdi-spin"></i> Şıklar yükleniyor...</small>');
+
+                            $.ajax({
+                                url: "https://localhost:7283/api/option/question/" + q.id,
+                                type: "GET",
+                                success: function (options) {
+                                    qBody.empty();
+
+                                    if(options.length === 0) {
+                                        qBody.html('<small class="text-danger">Bu soru için şık girilmemiş!</small>');
+                                        return;
+                                    }
+
+                                    options.sort((a, b) => a.orderNumber - b.orderNumber);
+
+                                    $.each(options, function(oIndex, opt) {
+                                        var inputType = q.questionType === 1 ? "radio" : "checkbox";
+                                        var inputName = q.questionType === 1 ? `question_${q.id}` : `question_${q.id}_opt_${opt.id}`;
+
+                                        var inputId = `opt_${opt.id}`;
+                                        var optionHtml = `
+                                            <div class="form-check form-check-primary mb-2">
+                                                <input type="${inputType}" class="form-check-input option-input" name="${inputName}" id="${inputId}" value="${opt.id}">
+                                                <label class="form-check-label" for="${inputId}" style="cursor:pointer; margin-left: 5px;">
+                                                    ${opt.optionText}
+                                                </label>
+                                            </div>
+                                        `;
+                                        qBody.append(optionHtml);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                },
+                error: function (xhr) {
+                    $("#questionsContainer").html('<div class="alert alert-danger text-center">Sorular yüklenirken bir hata oluştu!</div>');
+                }
+            });
+        }
+    </script>
+}

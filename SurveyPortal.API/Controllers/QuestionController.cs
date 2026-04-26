@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SurveyPortal.API.DTOs;
+using SurveyPortal.API.Models;
+using SurveyPortal.API.Repositories.Interfaces;
 using SurveyPortal.API.Services;
 
 namespace SurveyPortal.API.Controllers
@@ -10,10 +12,20 @@ namespace SurveyPortal.API.Controllers
     public class QuestionController : ControllerBase
     {
         private readonly IQuestionService _questionService;
+        private readonly IGenericRepository<Question> _questionRepository; // Repository'i ekledik
 
-        public QuestionController(IQuestionService questionService)
+        public QuestionController(IQuestionService questionService, IGenericRepository<Question> questionRepository)
         {
             _questionService = questionService;
+            _questionRepository = questionRepository;
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> GetAllQuestions()
+        {
+            var allQuestions = await _questionRepository.GetAllAsync();
+            return Ok(allQuestions);
         }
 
         [HttpGet("survey/{surveyId}")]
@@ -38,6 +50,7 @@ namespace SurveyPortal.API.Controllers
             await _questionService.DeleteQuestionAsync(id);
             return Ok(new { Message = "Soru başarıyla silindi (Soft Delete uygulandı)." });
         }
+
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, QuestionDto questionDto)

@@ -13,5 +13,17 @@ namespace SurveyPortal.MVC.Controllers
         {
             return View();
         }
+
+        public IActionResult Questions(int id)
+        {
+            ViewBag.SurveyId = id;
+            return View();
+        }
+        // Anket Sonuçları Sayfası
+        public IActionResult Results(int id)
+        {
+            ViewBag.SurveyId = id;
+            return View();
+        }
     }
 }

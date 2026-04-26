@@ -63,24 +63,33 @@ namespace SurveyPortal.API.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto loginDto)
         {
-            // 1. Kullanıcıyı veri tabanında bul
             var user = await _userManager.FindByNameAsync(loginDto.UserName);
             if (user == null)
                 return Unauthorized("Geçersiz kullanıcı adı veya şifre.");
 
-            // 2. Şifreyi kontrol et
             var isPasswordValid = await _userManager.CheckPasswordAsync(user, loginDto.Password);
             if (!isPasswordValid)
                 return Unauthorized("Geçersiz kullanıcı adı veya şifre.");
 
-            // 3. Kullanıcının rollerini al 
+            // Kullanıcının sahip olduğu tüm rolleri veritabanından çekiyoruz
             var roles = await _userManager.GetRolesAsync(user);
 
-            // 4. Token makinemizi çalıştır ve şifreli anahtarı (Token) üret
+            string primaryRole = roles.Any(r => r.ToLower() == "admin") ? "Admin" : roles.FirstOrDefault() ?? "User";
+
             var token = _jwtTokenGenerator.GenerateToken(user, roles);
 
-            // 5. Üretilen Token'ı kullanıcıya ver
-            return Ok(new { Token = token, Message = "Giriş başarılı." });
+            return Ok(new { Token = token, Role = primaryRole, Message = "Giriş başarılı." });
+        }
+        [HttpGet("make-admin/{username}")]
+        public async Task<IActionResult> MakeAdmin(string username)
+        {
+            var user = await _userManager.FindByNameAsync(username);
+            if (user == null) return NotFound("Böyle bir kullanıcı yok.");
+
+            // Bu kişiye "Admin" rolünü ver
+            await _userManager.AddToRoleAsync(user, "Admin");
+
+            return Ok(new { Message = $"{username} adlı kullanıcı artık bir ADMİN! Şimdi giriş yapabilirsiniz." });
         }
     }
 }

@@ -48,7 +48,7 @@
     </div>
 </div>
 
-<div class="modal fade" id="addSurveyModal" tabindex="-1" role="dialog" aria-labelledby="addSurveyModalLabel" aria-hidden="true">
+<div class="modal fade" id="addSurveyModal" role="dialog" aria-labelledby="addSurveyModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header bg-gradient-success text-white">
@@ -66,11 +66,15 @@
                         <textarea class="form-control" id="surveyDescription" rows="3" placeholder="Anketin amacı..."></textarea>
                     </div>
                     <div class="form-group mb-3">
-                        <label for="categoryId" class="font-weight-bold">Kategori <span class="text-danger">*</span></label>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <label for="categoryId" class="font-weight-bold m-0">Kategori <span class="text-danger">*</span></label>
+
+                            <a href="javascript:void(0);" id="btnAddNewCategory" class="text-success font-weight-bold text-decoration-none">
+                                <i class="mdi mdi-plus-circle"></i> Yeni Ekle
+                            </a>
+                        </div>
                         <select class="form-control form-control-lg" id="categoryId" required>
-                            <option value="">Lütfen Bir Kategori Seçin</option>
-                            <option value="1">Genel (Kategori 1)</option>
-                            <option value="2">Eğitim (Kategori 2)</option>
+                            <option value="">Kategoriler Yükleniyor...</option>
                         </select>
                     </div>
                 </form>
@@ -87,8 +91,31 @@
     <script>
         $(document).ready(function () {
             loadSurveys();
+            loadCategories();
         });
 
+        // 1. KATEGORİLERİ YÜKLE
+        function loadCategories() {
+            $.ajax({
+                url: "https://localhost:7283/api/category",
+                type: "GET",
+                success: function (categories) {
+                    var dropdown = $("#categoryId");
+                    dropdown.empty();
+                    dropdown.append('<option value="">Lütfen Bir Kategori Seçin</option>');
+
+                    $.each(categories, function (index, category) {
+                        dropdown.append('<option value="' + category.id + '">' + category.name + '</option>');
+                    });
+                },
+                error: function (xhr) {
+                    console.error("Kategoriler yüklenemedi", xhr);
+                    $("#categoryId").html('<option value="">Kategoriler çekilemedi!</option>');
+                }
+            });
+        }
+
+        // 2. EKSİK OLAN ANKETLERİ YÜKLEME FONKSİYONU (Yeniden Eklendi)
         function loadSurveys() {
             $.ajax({
                 url: "https://localhost:7283/api/survey",
@@ -113,9 +140,14 @@
                                 <td><small class="text-muted">${description}</small></td>
                                 <td>${date}</td>
                                 <td>
-                                    <button class="btn btn-sm btn-info btn-icon-text">
-                                        <i class="mdi mdi-eye btn-icon-prepend"></i> Sorular
-                                    </button>
+                                    <a href="/Admin/Questions/${survey.id}" class="btn btn-sm btn-info btn-icon-text">
+                                       <i class="mdi mdi-eye btn-icon-prepend"></i> Sorular
+                                    </a>
+
+                                    <a href="/Admin/Results/${survey.id}" class="btn btn-sm btn-warning btn-icon-text text-dark">
+                                       <i class="mdi mdi-chart-pie btn-icon-prepend"></i> Sonuçlar
+                                    </a>
+
                                     <button onclick="deleteSurvey('${survey.id}')" class="btn btn-sm btn-danger btn-icon-text">
                                         <i class="mdi mdi-delete btn-icon-prepend"></i> Sil
                                     </button>
@@ -132,6 +164,7 @@
             });
         }
 
+        // 3. ANKET SİLME FONKSİYONU
         function deleteSurvey(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
@@ -167,6 +200,7 @@
             });
         }
 
+        // 4. YENİ ANKET KAYDETME
         $("#btnSaveSurvey").click(function () {
             var titleInput = $("#surveyTitle").val();
             var descriptionInput = $("#surveyDescription").val();
@@ -194,7 +228,6 @@
                 data: JSON.stringify(surveyData),
                 success: function () {
                     $("#addSurveyModal").modal('hide');
-                    // Formu temizle
                     $("#surveyTitle").val("");
                     $("#surveyDescription").val("");
                     $("#categoryId").val("");
@@ -212,6 +245,63 @@
                 error: function (xhr) {
                     console.error("Ekleme hatası detayları:", xhr.responseText);
                     Swal.fire('Hata!', 'Anket oluşturulurken bir sorun yaşandı.', 'error');
+                }
+            });
+        });
+        $("#btnAddNewCategory").click(function () {
+            Swal.fire({
+                title: 'Yeni Kategori Ekle',
+                input: 'text',
+                inputPlaceholder: 'Örn: İnsan Kaynakları',
+                showCancelButton: true,
+                confirmButtonColor: '#1bcfb4',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Kaydet',
+                cancelButtonText: 'İptal',
+
+                target: document.getElementById('addSurveyModal'),
+
+                customClass: {
+                    container: 'my-swal-container'
+                },
+                focusConfirm: false,
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Kategori adı boş bırakılamaz!'
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+
+                    $.ajax({
+                        url: "https://localhost:7283/api/category",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({ name: result.value }),
+                        success: function () {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Eklendi!',
+                                text: result.value + ' kategorisi listeye eklendi.',
+                                timer: 1500,
+                                showConfirmButton: false,
+                                target: document.getElementById('addSurveyModal'), // Başarı mesajını da modal içine alıyoruz
+                                customClass: { container: 'my-swal-container' }
+                            });
+
+                            loadCategories();
+                        },
+                        error: function (xhr) {
+                            console.error("Kategori ekleme hatası:", xhr);
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Hata!',
+                                text: 'Kategori eklenirken bir sorun oluştu.',
+                                target: document.getElementById('addSurveyModal'), // Hata mesajını da modal içine alıyoruz
+                                customClass: { container: 'my-swal-container' }
+                            });
+                        }
+                    });
                 }
             });
         });
