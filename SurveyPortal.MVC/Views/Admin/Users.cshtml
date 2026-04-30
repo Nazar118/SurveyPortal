@@ -1,0 +1,124 @@
+﻿@{
+    ViewData["Title"] = "Kullanıcı Yönetimi";
+    Layout = "~/Views/Shared/_AdminLayout.cshtml";
+}
+
+<div class="page-header">
+    <h3 class="page-title">
+        <span class="page-title-icon bg-gradient-primary text-white me-2">
+            <i class="mdi mdi-account-multiple"></i>
+        </span> Kullanıcı Yönetimi
+    </h3>
+</div>
+
+<div class="row">
+    <div class="col-lg-12 grid-margin stretch-card">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title m-0">Sisteme Kayıtlı Kullanıcılar</h4>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Kullanıcı Adı</th>
+                                <th>E-Posta</th>
+                                <th>Rol (Yetki)</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userTableBody">
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                                    Kullanıcılar yükleniyor...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            loadUsers();
+        });
+
+        function loadUsers() {
+            $.ajax({
+                url: "https://localhost:7283/api/user",
+                type: "GET",
+                success: function (data) {
+                    var tbody = $("#userTableBody");
+                    tbody.empty();
+
+                    if (data.length === 0) {
+                        tbody.append('<tr><td colspan="5" class="text-center text-muted py-4">Sistemde henüz kayıtlı kullanıcı yok.</td></tr>');
+                        return;
+                    }
+
+                    $.each(data, function (index, user) {
+                        var roleBadge = user.role === "Admin"
+                            ? '<label class="badge badge-gradient-danger"><i class="mdi mdi-shield-account"></i> Admin</label>'
+                            : '<label class="badge badge-gradient-info"><i class="mdi mdi-account"></i> Kullanıcı</label>';
+
+                        var deleteBtn = `<button onclick="deleteUser('${user.id}')" class="btn btn-sm btn-danger btn-icon-text">
+                                            <i class="mdi mdi-delete btn-icon-prepend"></i> Sil
+                                         </button>`;
+
+                        var row = `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td class="font-weight-bold">${user.userName || user.name}</td>
+                                <td>${user.email}</td>
+                                <td>${roleBadge}</td>
+                                <td>${deleteBtn}</td>
+                            </tr>
+                        `;
+                        tbody.append(row);
+                    });
+                },
+                error: function (xhr) {
+                    console.error("Kullanıcılar yüklenemedi", xhr);
+                    $("#userTableBody").html('<tr><td colspan="5" class="text-center text-danger">Veriler çekilirken bir hata oluştu! (API Controller kontrol edilmeli)</td></tr>');
+                }
+            });
+        }
+
+        function deleteUser(id) {
+            Swal.fire({
+                title: 'Kullanıcıyı Sil',
+                text: "Bu hesabı silerseniz geri dönüşü olmaz!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#b66dff',
+                confirmButtonText: 'Evet, Sil!',
+                cancelButtonText: 'İptal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "https://localhost:7283/api/user/" + id,
+                        type: "DELETE",
+                        success: function () {
+                            Swal.fire({ icon: 'success', title: 'Silindi!', text: 'Kullanıcı sistemden uzaklaştırıldı.', timer: 1500, showConfirmButton: false });
+                            loadUsers();
+                        },
+                        error: function (xhr) {
+                            // API'den dönen o mantıklı hata mesajını ekrana basıyoruz!
+                            var errorMsg = xhr.responseText ? xhr.responseText : "Kullanıcı silinemedi.";
+                            Swal.fire('İşlem Reddedildi!', errorMsg, 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+}

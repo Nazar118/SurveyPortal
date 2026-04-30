@@ -46,6 +46,8 @@
                 success: function (res) {
                     $("#loadingSpinner").remove();
                     $("#surveyTitle").html(`<i class="mdi mdi-chart-pie me-2"></i> ${res.surveyTitle} - Analiz`);
+
+                    // 6.5 EXTRA: Toplam Katılım Gösterimi
                     $("#totalParticipants").text(res.totalParticipants);
 
                     var container = $("#chartsContainer");
@@ -55,64 +57,88 @@
                         return;
                     }
 
-                    // Her bir soru için kart ve grafik (Canvas) oluştur
                     $.each(res.questions, function (index, q) {
-                        // Sadece şıklı soruların grafiği çizilebilir
-                        if (q.options && q.options.length > 0) {
-                            var canvasId = `chart_q_${q.questionId}`;
+                        var canvasId = `chart_q_${q.questionId}`;
 
-                            var cardHtml = `
-                                <div class="col-md-6 grid-margin stretch-card">
-                                    <div class="card shadow-sm border-0">
-                                        <div class="card-body">
-                                            <h5 class="card-title text-dark font-weight-bold mb-4">${index + 1}. ${q.questionText}</h5>
-                                            <p class="text-muted small">Bu soruya ${q.totalAnswers} yanıt verilmiş.</p>
-                                            <canvas id="${canvasId}" style="max-height: 250px;"></canvas>
+                        // Her soru için standart kart iskeletini oluşturuyoruz
+                        var cardHtml = `
+                            <div class="col-md-6 grid-margin stretch-card">
+                                <div class="card shadow-sm border-0 w-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title text-dark font-weight-bold mb-4">${index + 1}. ${q.questionText}</h5>
+                                        <p class="text-muted small">Bu soruya ${q.totalAnswers} yanıt verilmiş.</p>
+
+                                        <div style="position: relative; height:250px; width:100%">
+                                            <canvas id="${canvasId}"></canvas>
                                         </div>
+
+                                        <!-- En popüler cevap veya metin yanıtları buraya gelecek -->
+                                        <div id="extra_info_${q.questionId}" class="mt-3"></div>
                                     </div>
                                 </div>
-                            `;
-                            container.append(cardHtml);
+                            </div>
+                        `;
+                        container.append(cardHtml);
 
-                            var labels = q.options.map(o => o.optionText + " (% " + o.percentage + ")");
-                            var data = q.options.map(o => o.voteCount);
-
-                            // Renk Paleti
+                        // EĞER SORU ŞIKLIYSA (Tekli veya Çoklu Seçim)
+                        if (q.options && q.options.length > 0) {
+                            var labels = q.options.map(o => o.optionText);
+                            var dataPoints = q.options.map(o => o.voteCount);
                             var colors = ['#b66dff', '#4facfe', '#00f2fe', '#f83600', '#f9d423', '#1d976c'];
 
-                            // Chart.js Çizimi
+                            // 6.5 EXTRA: En çok seçilen cevabı bul ve karta ekle
+                            var maxVotes = Math.max(...dataPoints);
+                            if (maxVotes > 0) {
+                                var topOption = q.options.find(o => o.voteCount === maxVotes);
+                                $(`#extra_info_${q.questionId}`).html(`
+                                    <div class="alert alert-success py-2 mb-0 d-flex justify-content-between align-items-center">
+                                        <span><i class="mdi mdi-star text-warning"></i> <strong>En popüler:</strong> ${topOption.optionText}</span>
+                                        <span class="badge bg-white text-success border border-success">${topOption.voteCount} Oy</span>
+                                    </div>
+                                `);
+                            }
+
+                            var isHorizontal = (q.questionType === 2);
+
                             var ctx = document.getElementById(canvasId).getContext('2d');
                             new Chart(ctx, {
-                                type: 'doughnut', // 'pie' veya 'bar' da yapabilirsin
+                                type: 'bar', 
                                 data: {
                                     labels: labels,
                                     datasets: [{
-                                        data: data,
-                                        backgroundColor: colors,
-                                        borderWidth: 0
+                                        label: 'Oy Sayısı',
+                                        data: dataPoints,
+                                        backgroundColor: colors.slice(0, labels.length),
+                                        borderRadius: 4
                                     }]
                                 },
                                 options: {
+                                    indexAxis: isHorizontal ? 'y' : 'x', 
                                     responsive: true,
                                     maintainAspectRatio: false,
-                                    plugins: {
-                                        legend: { position: 'right' }
+                                    plugins: { legend: { display: false } },
+                                    scales: {
+                                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                                        x: { beginAtZero: true, ticks: { stepSize: 1 } }
                                     }
                                 }
                             });
-                        } else {
-                            // Metin soruları için liste görünümü
-                            var textHtml = `
-                                <div class="col-md-6 grid-margin stretch-card">
-                                    <div class="card shadow-sm border-0">
-                                        <div class="card-body">
-                                            <h5 class="card-title text-dark font-weight-bold mb-4">${index + 1}. ${q.questionText}</h5>
-                                            <div class="alert alert-info py-2">Bu bir metin sorusudur. Metin yanıtları detay raporundan incelenebilir.</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
-                            container.append(textHtml);
+                        }
+                        else {
+                            $(`#${canvasId}`).parent().remove(); 
+
+                            var textHtml = '<ul class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">';
+
+                            if (q.textAnswers && q.textAnswers.length > 0) {
+                                $.each(q.textAnswers, function(i, txt) {
+                                    textHtml += `<li class="list-group-item bg-light mb-1 rounded text-sm"><i class="mdi mdi-comment-text-outline text-info"></i> ${txt}</li>`;
+                                });
+                            } else {
+                                textHtml += '<li class="list-group-item text-muted">Bu soru için metin yanıtı bulunmuyor.</li>';
+                            }
+
+                            textHtml += '</ul>';
+                            $(`#extra_info_${q.questionId}`).html(textHtml);
                         }
                     });
                 },

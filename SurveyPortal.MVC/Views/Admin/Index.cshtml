@@ -39,49 +39,84 @@
             </div>
         </div>
     </div>
+    <div class="row mt-4">
+        <div class="col-12 grid-margin">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h4 class="card-title text-dark font-weight-bold mb-4">
+                        <i class="mdi mdi-clock-outline text-primary"></i> Son Eklenen Anketler
+                    </h4>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="bg-light">
+                                <tr>
+                                    <th>Anket Başlığı</th>
+                                    <th>Oluşturulma Tarihi</th>
+                                    <th>Durum</th>
+                                    <th>Hızlı İşlem</th>
+                                </tr>
+                            </thead>
+                            <tbody id="latestSurveysTable">
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Veriler Yükleniyor...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
     <script>
         $(document).ready(function () {
-
             $.ajax({
-                url: "https://localhost:7283/api/survey",
+                url: "https://localhost:7283/api/dashboard/stats",
                 type: "GET",
-                success: function (data) {
-                    $("#dashSurveys").text(data.length);
-                },
-                error: function () {
-                    $("#dashSurveys").text("Hata");
-                }
-            });
+                success: function (stats) {
+                    $("#dashSurveys").text(stats.totalSurveys);
 
-            $.ajax({
-                url: "https://localhost:7283/api/question",
-                type: "GET",
-                success: function (data) {
-                    $("#dashQuestions").text(data.length);
+                    $("#dashQuestions").text(stats.totalQuestions);
                     $("#dashQuestions").next("h6").text("Anketlere eklenen tüm sorular");
-                },
-                error: function () {
-                    $("#dashQuestions").text("?");
-                    $("#dashQuestions").next("h6").text("API metodunuz kontrol edilmeli");
-                }
-            });
 
-            $.ajax({
-                url: "https://localhost:7283/api/answer", 
-                type: "GET",
-                success: function (data) {
-                    $("#dashResponses").text(data.length);
+                    $("#dashResponses").text(stats.totalResponses);
                     $("#dashResponses").next("h6").text("Kullanıcıların verdiği toplam yanıt");
+
+                    var tbody = $("#latestSurveysTable");
+                    tbody.empty();
+
+                    if(stats.latestSurveys.length === 0) {
+                         tbody.append('<tr><td colspan="4" class="text-center text-muted">Sistemde henüz anket bulunmuyor.</td></tr>');
+                    } else {
+                         $.each(stats.latestSurveys, function (index, survey) {
+                             var date = new Date(survey.createdDate).toLocaleDateString("tr-TR");
+
+                             var statusBadge = survey.isActive
+                                 ? '<label class="badge badge-success">Aktif</label>'
+                                 : '<label class="badge badge-secondary">Pasif</label>';
+
+                             tbody.append(`
+                                 <tr>
+                                     <td class="font-weight-bold">${survey.title}</td>
+                                     <td>${date}</td>
+                                     <td>${statusBadge}</td>
+                                     <td>
+                                         <a href="/Admin/Results/${survey.id}" class="btn btn-sm btn-outline-warning text-dark">
+                                            <i class="mdi mdi-chart-pie"></i> Sonuçlar
+                                         </a>
+                                     </td>
+                                 </tr>
+                             `);
+                         });
+                    }
                 },
-                error: function () {
-                    $("#dashResponses").text("?");
-                    $("#dashResponses").next("h6").text("API metodunuz kontrol edilmeli");
+                error: function (xhr) {
+                    console.error("Dashboard verileri çekilemedi:", xhr);
+                    $("#dashSurveys, #dashQuestions, #dashResponses").text("Hata!");
                 }
             });
-
         });
     </script>
 }

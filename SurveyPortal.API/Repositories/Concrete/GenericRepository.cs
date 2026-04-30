@@ -17,15 +17,15 @@ namespace SurveyPortal.API.Repositories.Concrete
         }
 
         public async Task AddAsync(T entity) => await _dbSet.AddAsync(entity);
-
         public async Task<IEnumerable<T>> GetAllAsync() => await _dbSet.ToListAsync();
-
         public async Task<T?> GetByIdAsync(int id) => await _dbSet.FindAsync(id);
-
         public void Remove(T entity) => _dbSet.Remove(entity);
-
         public void Update(T entity) => _dbSet.Update(entity);
-
         public IQueryable<T> Where(Expression<Func<T, bool>> expression) => _dbSet.Where(expression);
+
+        public async Task SaveChangesAsync()
+        {
+            await _context.SaveChangesAsync();
+        }
     }
 }

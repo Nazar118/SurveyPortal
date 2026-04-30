@@ -10,6 +10,7 @@ namespace SurveyPortal.API.Repositories.Interfaces
         IQueryable<T> Where(Expression<Func<T, bool>> expression); //Filtrele
         Task AddAsync(T entity); 
         void Update(T entity); 
-        void Remove(T entity); 
+        void Remove(T entity);
+        Task SaveChangesAsync();
     }
 }
