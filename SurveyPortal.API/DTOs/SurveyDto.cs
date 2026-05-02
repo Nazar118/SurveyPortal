@@ -8,5 +8,9 @@
         public bool IsActive { get; set; }
         public int CategoryId { get; set; }
         public DateTime CreatedDate { get; set; }
+
+        public DateTime? EndDate { get; set; }
+        public bool IsPublished { get; set; }
+        public bool IsAnonymous { get; set; }
     }
 }

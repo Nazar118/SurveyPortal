@@ -1,33 +1,100 @@
 ﻿@{
-    ViewData["Title"] = "Anket Sonuçları";
+    ViewData["Title"] = "Anket Analizi";
     Layout = "~/Views/Shared/_AdminLayout.cshtml";
 }
 
 <div class="page-header d-flex justify-content-between align-items-center">
     <h3 class="page-title text-primary font-weight-bold" id="surveyTitle">
-        <i class="mdi mdi-chart-pie me-2"></i> Sonuçlar Yükleniyor...
+        <i class="mdi mdi-chart-pie me-2"></i> Analiz Yükleniyor...
     </h3>
-    <a href="/Admin/Index" class="btn btn-outline-secondary btn-sm">Geri Dön</a>
+    <a href="/Admin/SurveyList" class="btn btn-outline-secondary btn-sm">Listeye Dön</a>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card bg-gradient-info text-white shadow-sm border-0">
-            <div class="card-body text-center py-3">
-                <h4 class="m-0"><i class="mdi mdi-account-group"></i> Toplam Katılım: <span id="totalParticipants" class="font-weight-bold">0</span> Kişi</h4>
+<ul class="nav nav-pills nav-fill bg-white shadow-sm rounded mb-4" id="pills-tab" role="tablist" style="padding: 10px;">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active font-weight-bold" id="pills-grafik-tab" data-bs-toggle="pill" data-bs-target="#pills-grafik" type="button" role="tab">
+            <i class="mdi mdi-chart-bar"></i> Genel İstatistikler
+        </button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link font-weight-bold" id="pills-kullanici-tab" data-bs-toggle="pill" data-bs-target="#pills-kullanici" type="button" role="tab">
+            <i class="mdi mdi-account-details"></i> Katılımcı Yanıtları
+        </button>
+    </li>
+</ul>
+
+<!-- Sekme İçerikleri -->
+<div class="tab-content" id="pills-tabContent">
+
+    <!-- 1. SEKME: GRAFİKLER -->
+    <div class="tab-pane fade show active" id="pills-grafik" role="tabpanel">
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info d-flex justify-content-between align-items-center">
+                    <span class="font-weight-bold"><i class="mdi mdi-account-group"></i> Toplam Katılımcı Sayısı:</span>
+                    <span class="badge badge-info" id="totalParticipants" style="font-size: 1rem;">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row" id="chartsContainer">
+            <div class="col-12 text-center py-5" id="loadingSpinner">
+                <div class="spinner-border text-primary" role="status"></div>
+                <p class="text-muted mt-2">Veriler analiz ediliyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. SEKME: KULLANICI DETAYLARI -->
+    <div class="tab-pane fade" id="pills-kullanici" role="tabpanel">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h4 class="card-title mb-4">Kim Ne Cevap Verdi?</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Katılımcı / Kullanıcı Adı</th>
+                                <th>Katılım Tarihi</th>
+                                <th>Durum</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userResponsesTable">
+                            <tr>
+                                <td colspan="4" class="text-center text-muted">Kullanıcı verileri yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<input type="hidden" id="hiddenSurveyId" value="@ViewBag.SurveyId" />
+
+<div class="modal fade" id="userAnswersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title font-weight-bold" id="modalUserName">
+                    <i class="mdi mdi-account-circle me-2"></i> Kullanıcı Yanıtları
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body bg-light p-4">
+                <ul class="list-group list-group-flush rounded shadow-sm" id="modalAnswersList">
+                    <!-- Javascript ile doldurulacak -->
+                </ul>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
             </div>
         </div>
     </div>
 </div>
-
-<div class="row" id="chartsContainer">
-    <div class="col-12 text-center py-5" id="loadingSpinner">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p class="text-muted mt-2">Veriler analiz ediliyor...</p>
-    </div>
-</div>
-
-<input type="hidden" id="hiddenSurveyId" value="@ViewBag.SurveyId" />
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -37,8 +104,14 @@
 
         $(document).ready(function () {
             loadResults();
+
+            // İkinci sekmeye tıklandığında tetiklenecek
+            $('#pills-kullanici-tab').on('shown.bs.tab', function () {
+                loadUserSpecificResponses();
+            });
         });
 
+        // --- 1. SEKME İÇİN GRAFİK YÜKLEME FONKSİYONU (Aynı bıraktık) ---
         function loadResults() {
             $.ajax({
                 url: "https://localhost:7283/api/result/" + currentSurveyId,
@@ -46,106 +119,158 @@
                 success: function (res) {
                     $("#loadingSpinner").remove();
                     $("#surveyTitle").html(`<i class="mdi mdi-chart-pie me-2"></i> ${res.surveyTitle} - Analiz`);
-
-                    // 6.5 EXTRA: Toplam Katılım Gösterimi
                     $("#totalParticipants").text(res.totalParticipants);
 
                     var container = $("#chartsContainer");
-
                     if (res.questions.length === 0) {
-                        container.html('<div class="col-12"><div class="alert alert-warning text-center">Bu ankete henüz yanıt verilmemiş veya soru eklenmemiş.</div></div>');
+                        container.html('<div class="col-12"><div class="alert alert-warning text-center">Henüz veri yok.</div></div>');
                         return;
                     }
 
                     $.each(res.questions, function (index, q) {
-                        var canvasId = `chart_q_${q.questionId}`;
-
-                        // Her soru için standart kart iskeletini oluşturuyoruz
-                        var cardHtml = `
-                            <div class="col-md-6 grid-margin stretch-card">
-                                <div class="card shadow-sm border-0 w-100">
-                                    <div class="card-body">
-                                        <h5 class="card-title text-dark font-weight-bold mb-4">${index + 1}. ${q.questionText}</h5>
-                                        <p class="text-muted small">Bu soruya ${q.totalAnswers} yanıt verilmiş.</p>
-
-                                        <div style="position: relative; height:250px; width:100%">
-                                            <canvas id="${canvasId}"></canvas>
-                                        </div>
-
-                                        <!-- En popüler cevap veya metin yanıtları buraya gelecek -->
-                                        <div id="extra_info_${q.questionId}" class="mt-3"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        container.append(cardHtml);
-
-                        // EĞER SORU ŞIKLIYSA (Tekli veya Çoklu Seçim)
                         if (q.options && q.options.length > 0) {
-                            var labels = q.options.map(o => o.optionText);
-                            var dataPoints = q.options.map(o => o.voteCount);
-                            var colors = ['#b66dff', '#4facfe', '#00f2fe', '#f83600', '#f9d423', '#1d976c'];
-
-                            // 6.5 EXTRA: En çok seçilen cevabı bul ve karta ekle
-                            var maxVotes = Math.max(...dataPoints);
-                            if (maxVotes > 0) {
-                                var topOption = q.options.find(o => o.voteCount === maxVotes);
-                                $(`#extra_info_${q.questionId}`).html(`
-                                    <div class="alert alert-success py-2 mb-0 d-flex justify-content-between align-items-center">
-                                        <span><i class="mdi mdi-star text-warning"></i> <strong>En popüler:</strong> ${topOption.optionText}</span>
-                                        <span class="badge bg-white text-success border border-success">${topOption.voteCount} Oy</span>
+                            var canvasId = `chart_q_${q.questionId}`;
+                            var cardHtml = `
+                                <div class="col-md-6 grid-margin stretch-card mb-4">
+                                    <div class="card shadow-sm border-1 border-light w-100">
+                                        <div class="card-body p-3">
+                                            <p class="font-weight-bold text-dark text-sm mb-2">${index + 1}. ${q.questionText}</p>
+                                            <div style="position: relative; height:220px; width:100%">
+                                                <canvas id="${canvasId}"></canvas>
+                                            </div>
+                                        </div>
                                     </div>
-                                `);
-                            }
+                                </div>`;
+                            container.append(cardHtml);
 
+                            var fullLabels = q.options.map(o => o.optionText);
+                            var shortLabels = fullLabels.map(l => l.length > 20 ? l.substring(0, 20) + "..." : l);
+                            var dataPoints = q.options.map(o => o.voteCount);
                             var isHorizontal = (q.questionType === 2);
-
                             var ctx = document.getElementById(canvasId).getContext('2d');
+
                             new Chart(ctx, {
-                                type: 'bar', 
+                                type: 'bar',
                                 data: {
-                                    labels: labels,
+                                    labels: shortLabels,
                                     datasets: [{
                                         label: 'Oy Sayısı',
                                         data: dataPoints,
-                                        backgroundColor: colors.slice(0, labels.length),
+                                        backgroundColor: ['#b66dff', '#4facfe', '#f83600', '#f9d423', '#1bcfb4', '#3e4b5b'],
                                         borderRadius: 4
                                     }]
                                 },
                                 options: {
-                                    indexAxis: isHorizontal ? 'y' : 'x', 
+                                    indexAxis: isHorizontal ? 'y' : 'x',
                                     responsive: true,
                                     maintainAspectRatio: false,
-                                    plugins: { legend: { display: false } },
+                                    plugins: {
+                                        legend: { display: false },
+                                        tooltip: {
+                                            callbacks: {
+                                                title: function(context) {
+                                                    var idx = context[0].dataIndex;
+                                                    return fullLabels[idx];
+                                                }
+                                            }
+                                        }
+                                    },
                                     scales: {
-                                        y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                                        x: { beginAtZero: true, ticks: { stepSize: 1 } }
+                                        x: { ticks: { maxRotation: 0, minRotation: 0, font: { size: 11 } } },
+                                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
                                     }
                                 }
                             });
-                        }
-                        else {
-                            $(`#${canvasId}`).parent().remove(); 
-
-                            var textHtml = '<ul class="list-group list-group-flush" style="max-height: 200px; overflow-y: auto;">';
-
-                            if (q.textAnswers && q.textAnswers.length > 0) {
-                                $.each(q.textAnswers, function(i, txt) {
-                                    textHtml += `<li class="list-group-item bg-light mb-1 rounded text-sm"><i class="mdi mdi-comment-text-outline text-info"></i> ${txt}</li>`;
-                                });
-                            } else {
-                                textHtml += '<li class="list-group-item text-muted">Bu soru için metin yanıtı bulunmuyor.</li>';
-                            }
-
-                            textHtml += '</ul>';
-                            $(`#extra_info_${q.questionId}`).html(textHtml);
+                        } else {
+                             var textHtml = `
+                                <div class="col-md-6 grid-margin stretch-card mb-4">
+                                    <div class="card shadow-sm border-1 border-light w-100">
+                                        <div class="card-body p-3">
+                                            <p class="font-weight-bold text-dark text-sm mb-2">${index + 1}. ${q.questionText}</p>
+                                            <div class="alert alert-info py-2 text-sm">Bu bir metin sorusudur. Yanıtları sekmeden inceleyebilirsiniz.</div>
+                                        </div>
+                                    </div>
+                                </div>`;
+                             container.append(textHtml);
                         }
                     });
                 },
-                error: function (xhr) {
-                    $("#loadingSpinner").html('<div class="alert alert-danger text-center">Sonuçlar yüklenirken bir hata oluştu.</div>');
+                error: function () {
+                    $("#chartsContainer").html('<div class="col-12"><div class="alert alert-danger text-center">Yüklenirken hata oluştu.</div></div>');
                 }
             });
+        }
+
+        function loadUserSpecificResponses() {
+            var tbody = $("#userResponsesTable");
+            tbody.html('<tr><td colspan="4" class="text-center"><div class="spinner-border text-info spinner-border-sm"></div> Yükleniyor...</td></tr>');
+
+            $.ajax({
+                url: "https://localhost:7283/api/result/users/" + currentSurveyId,
+                type: "GET",
+                success: function (data) {
+                    tbody.empty();
+                    if(data.length === 0) {
+                        tbody.append('<tr><td colspan="4" class="text-center text-muted">Bu anketi henüz kimse çözmemiş.</td></tr>');
+                        return;
+                    }
+
+                    $.each(data, function(i, userResult) {
+                        tbody.append(`
+                            <tr class="bg-white">
+                                <td class="font-weight-bold"><i class="mdi mdi-account-circle text-primary me-2"></i> ${userResult.userName}</td>
+                                <td>${new Date(userResult.submissionDate).toLocaleDateString("tr-TR")}</td>
+                                <td><label class="badge bg-success text-white">Tamamladı</label></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary shadow-sm" onclick="toggleAnswers('${userResult.userId}')">
+                                        <i class="mdi mdi-chevron-down"></i> Yanıtları Aç
+                                    </button>
+                                </td>
+                            </tr>
+                        `);
+
+                        var answersHtml = '<ul class="list-group list-group-flush mb-0">';
+                        $.each(userResult.answers, function(j, ans) {
+                            var ansText = ans.answer ? ans.answer : '<span class="text-muted fst-italic">Cevap verilmemiş</span>';
+                            answersHtml += `
+                                <li class="list-group-item bg-transparent px-0 py-2 border-0 mb-1">
+                                    <span class="font-weight-bold text-dark d-block" style="font-size:0.9rem;">${j+1}. ${ans.question}</span>
+                                    <span class="text-primary mt-1 d-block"><i class="mdi mdi-subdirectory-arrow-right"></i> ${ansText}</span>
+                                </li>
+                            `;
+                        });
+                        answersHtml += '</ul>';
+
+                        tbody.append(`
+                            <tr id="tr_detail_${userResult.userId}" style="display: none; background-color: #fafbfc;">
+                                <td colspan="4" class="p-0 border-0">
+                                    <div id="div_detail_${userResult.userId}" class="p-4 border-start border-4 border-primary shadow-inner" style="display: none;">
+                                        <h6 class="font-weight-bold text-muted mb-3"><i class="mdi mdi-format-list-bulleted"></i> ${userResult.userName} kişisinin yanıtları:</h6>
+                                        ${answersHtml}
+                                    </div>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                },
+                error: function () {
+                    tbody.html('<tr><td colspan="4" class="text-center text-danger">Bağlantı hatası: Kullanıcı verileri çekilemedi!</td></tr>');
+                }
+            });
+        }
+
+        function toggleAnswers(userId) {
+            var tr = $(`#tr_detail_${userId}`);
+            var div = $(`#div_detail_${userId}`);
+
+            if (tr.is(':visible')) {
+                div.slideUp(300, function() {
+                    tr.hide();
+                });
+            } else {
+                tr.show();
+                div.slideDown(300);
+            }
         }
     </script>
 }

@@ -29,7 +29,8 @@
                                 <th>#</th>
                                 <th>Anket Başlığı</th>
                                 <th>Açıklama</th>
-                                <th>Oluşturulma Tarihi</th>
+                                <th>Bitiş Tarihi</th>
+                                <th>Durum</th> 
                                 <th>İşlemler</th>
                             </tr>
                         </thead>
@@ -68,7 +69,6 @@
                     <div class="form-group mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <label for="categoryId" class="font-weight-bold m-0">Kategori <span class="text-danger">*</span></label>
-
                             <a href="javascript:void(0);" id="btnAddNewCategory" class="text-success font-weight-bold text-decoration-none">
                                 <i class="mdi mdi-plus-circle"></i> Yeni Ekle
                             </a>
@@ -77,11 +77,69 @@
                             <option value="">Kategoriler Yükleniyor...</option>
                         </select>
                     </div>
+
+                    <div class="form-group mb-3">
+                        <label for="surveyEndDate" class="font-weight-bold">Bitiş Tarihi <small class="text-muted">(İsteğe Bağlı)</small></label>
+                        <input type="date" class="form-control form-control-lg" id="surveyEndDate">
+                    </div>
+
+                    <div class="form-check mt-4 mb-2">
+                        <label class="form-check-label font-weight-bold text-dark">
+                            <input type="checkbox" class="form-check-input" id="surveyIsActive" checked>
+                            Bu anket yayına alınsın mı? (Aktif)
+                            <i class="input-helper"></i>
+                        </label>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
                 <button type="button" class="btn btn-gradient-success" id="btnSaveSurvey">Kaydet ve Oluştur</button>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- DÜZENLEME MODALI -->
+<div class="modal fade" id="editSurveyModal" role="dialog" aria-labelledby="editSurveyModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title" id="editSurveyModalLabel">Anketi Düzenle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editSurveyForm">
+                    <input type="hidden" id="editSurveyId">
+                    <div class="form-group mb-3">
+                        <label for="editSurveyTitle" class="font-weight-bold">Anket Başlığı <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg" id="editSurveyTitle" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="editSurveyDescription" class="font-weight-bold">Açıklama</label>
+                        <textarea class="form-control" id="editSurveyDescription" rows="3"></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="editCategoryId" class="font-weight-bold">Kategori <span class="text-danger">*</span></label>
+                        <select class="form-control form-control-lg" id="editCategoryId" required>
+                            <option value="">Kategoriler Yükleniyor...</option>
+                        </select>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="editSurveyEndDate" class="font-weight-bold">Bitiş Tarihi <small class="text-muted">(İsteğe Bağlı)</small></label>
+                        <input type="date" class="form-control form-control-lg" id="editSurveyEndDate">
+                    </div>
+                    <div class="form-check mt-4 mb-2">
+                        <label class="form-check-label font-weight-bold text-dark">
+                            <input type="checkbox" class="form-check-input" id="editSurveyIsActive">
+                            Bu anket yayına alınsın mı? (Aktif)
+                            <i class="input-helper"></i>
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-gradient-primary" id="btnUpdateSurvey">Değişiklikleri Kaydet</button>
             </div>
         </div>
     </div>
@@ -100,12 +158,16 @@
                 url: "https://localhost:7283/api/category",
                 type: "GET",
                 success: function (categories) {
-                    var dropdown = $("#categoryId");
-                    dropdown.empty();
-                    dropdown.append('<option value="">Lütfen Bir Kategori Seçin</option>');
+                    var dropdownAdd = $("#categoryId");
+                    var dropdownEdit = $("#editCategoryId"); 
+
+                    dropdownAdd.empty().append('<option value="">Lütfen Bir Kategori Seçin</option>');
+                    dropdownEdit.empty().append('<option value="">Lütfen Bir Kategori Seçin</option>');
 
                     $.each(categories, function (index, category) {
-                        dropdown.append('<option value="' + category.id + '">' + category.name + '</option>');
+                        var option = '<option value="' + category.id + '">' + category.name + '</option>';
+                        dropdownAdd.append(option);
+                        dropdownEdit.append(option); 
                     });
                 },
                 error: function (xhr) {
@@ -115,7 +177,7 @@
             });
         }
 
-        // 2. EKSİK OLAN ANKETLERİ YÜKLEME FONKSİYONU (Yeniden Eklendi)
+        // 2. EKSİK OLAN ANKETLERİ YÜKLEME FONKSİYONU
         function loadSurveys() {
             $.ajax({
                 url: "https://localhost:7283/api/survey",
@@ -125,29 +187,44 @@
                     tbody.empty();
 
                     if (data.length === 0) {
-                        tbody.append('<tr><td colspan="5" class="text-center text-muted">Henüz hiç anket bulunmuyor.</td></tr>');
+                        tbody.append('<tr><td colspan="6" class="text-center text-muted">Henüz hiç anket bulunmuyor.</td></tr>');
                         return;
                     }
 
                     $.each(data, function (index, survey) {
-                        var date = survey.createdDate ? new Date(survey.createdDate).toLocaleDateString("tr-TR") : "-";
                         var description = survey.description ? survey.description.substring(0, 30) + (survey.description.length > 30 ? "..." : "") : "-";
+
+                        var endDateText = survey.endDate ? new Date(survey.endDate).toLocaleDateString("tr-TR") : '<span class="text-muted fst-italic">Süresiz</span>';
+
+                        var statusBadge = "";
+                        var now = new Date();
+                        var end = survey.endDate ? new Date(survey.endDate) : null;
+
+                        if (survey.isActive === false) {
+                            statusBadge = '<label class="badge bg-secondary text-white">Pasif</label>';
+                        } else if (end !== null && end < now) {
+                            statusBadge = '<label class="badge bg-danger text-white">Süresi Doldu</label>';
+                        } else {
+                            statusBadge = '<label class="badge bg-success text-white">Aktif</label>';
+                        }
 
                         var row = `
                             <tr>
                                 <td>${index + 1}</td>
                                 <td class="font-weight-bold">${survey.title || 'İsimsiz Anket'}</td>
                                 <td><small class="text-muted">${description}</small></td>
-                                <td>${date}</td>
+                                <td>${endDateText}</td>
+                                <td>${statusBadge}</td> 
                                 <td>
-                                    <a href="/Admin/Questions/${survey.id}" class="btn btn-sm btn-info btn-icon-text">
+                                    <a href="/Admin/Questions/${survey.id}" class="btn btn-sm btn-info btn-icon-text text-white">
                                        <i class="mdi mdi-eye btn-icon-prepend"></i> Sorular
                                     </a>
-
+                                    <button onclick="openEditModal('${survey.id}')" class="btn btn-sm btn-primary btn-icon-text text-white">
+                                        <i class="mdi mdi-pencil btn-icon-prepend"></i> Düzenle
+                                    </button>
                                     <a href="/Admin/Results/${survey.id}" class="btn btn-sm btn-warning btn-icon-text text-dark">
                                        <i class="mdi mdi-chart-pie btn-icon-prepend"></i> Sonuçlar
                                     </a>
-
                                     <button onclick="deleteSurvey('${survey.id}')" class="btn btn-sm btn-danger btn-icon-text">
                                         <i class="mdi mdi-delete btn-icon-prepend"></i> Sil
                                     </button>
@@ -159,7 +236,7 @@
                 },
                 error: function (xhr) {
                     console.error("Anketler yüklenemedi", xhr);
-                    $("#surveyTableBody").html('<tr><td colspan="5" class="text-center text-danger">Veriler çekilirken bir hata oluştu!</td></tr>');
+                    $("#surveyTableBody").html('<tr><td colspan="6" class="text-center text-danger">Veriler çekilirken bir hata oluştu!</td></tr>');
                 }
             });
         }
@@ -206,6 +283,9 @@
             var descriptionInput = $("#surveyDescription").val();
             var categoryIdInput = $("#categoryId").val();
 
+            var endDateInput = $("#surveyEndDate").val();
+            var isActiveInput = $("#surveyIsActive").is(":checked");
+
             if (!titleInput || !categoryIdInput) {
                 Swal.fire('Uyarı', 'Lütfen Başlık ve Kategori alanlarını doldurunuz!', 'warning');
                 return;
@@ -215,10 +295,10 @@
                 title: titleInput,
                 description: descriptionInput,
                 categoryId: parseInt(categoryIdInput),
-                isActive: true,
+                isActive: isActiveInput, 
+                endDate: endDateInput ? endDateInput : null, 
                 isPublished: false,
-                isAnonymous: false,
-                createdDate: new Date().toISOString()
+                isAnonymous: false
             };
 
             $.ajax({
@@ -231,6 +311,8 @@
                     $("#surveyTitle").val("");
                     $("#surveyDescription").val("");
                     $("#categoryId").val("");
+                    $("#surveyEndDate").val("");
+                    $("#surveyIsActive").prop("checked", true);
 
                     Swal.fire({
                         icon: 'success',
@@ -285,7 +367,7 @@
                                 text: result.value + ' kategorisi listeye eklendi.',
                                 timer: 1500,
                                 showConfirmButton: false,
-                                target: document.getElementById('addSurveyModal'), // Başarı mesajını da modal içine alıyoruz
+                                target: document.getElementById('addSurveyModal'), 
                                 customClass: { container: 'my-swal-container' }
                             });
 
@@ -297,11 +379,87 @@
                                 icon: 'error',
                                 title: 'Hata!',
                                 text: 'Kategori eklenirken bir sorun oluştu.',
-                                target: document.getElementById('addSurveyModal'), // Hata mesajını da modal içine alıyoruz
+                                target: document.getElementById('addSurveyModal'), 
                                 customClass: { container: 'my-swal-container' }
                             });
                         }
                     });
+                }
+            });
+        });
+        var currentEditingSurvey = null; 
+
+        // 5. DÜZENLEME PENCERESİNİ AÇ
+        function openEditModal(id) {
+            $.ajax({
+                url: "https://localhost:7283/api/survey/" + id,
+                type: "GET",
+                success: function (survey) {
+                    currentEditingSurvey = survey; 
+
+                    $("#editSurveyId").val(survey.id);
+                    $("#editSurveyTitle").val(survey.title);
+                    $("#editSurveyDescription").val(survey.description);
+                    $("#editCategoryId").val(survey.categoryId);
+                    $("#editSurveyIsActive").prop("checked", survey.isActive);
+
+                    if (survey.endDate) {
+                        var dateObj = new Date(survey.endDate);
+                        var formattedDate = dateObj.toISOString().split('T')[0];
+                        $("#editSurveyEndDate").val(formattedDate);
+                    } else {
+                        $("#editSurveyEndDate").val("");
+                    }
+
+                    $("#editSurveyModal").modal('show');
+                },
+                error: function () {
+                    Swal.fire('Hata!', 'Anket bilgileri getirilemedi.', 'error');
+                }
+            });
+        }
+
+        // 6. GÜNCELLENMİŞ VERİYİ KAYDET
+        $("#btnUpdateSurvey").click(function () {
+            if (!$("#editSurveyTitle").val() || !$("#editCategoryId").val()) {
+                Swal.fire('Uyarı', 'Başlık ve Kategori boş bırakılamaz!', 'warning');
+                return;
+            }
+
+            var newEndDate = $("#editSurveyEndDate").val();
+
+            var updateData = {
+                id: currentEditingSurvey.id,
+                title: $("#editSurveyTitle").val(),
+                description: $("#editSurveyDescription").val(),
+                categoryId: parseInt($("#editCategoryId").val()),
+                isActive: $("#editSurveyIsActive").is(":checked"),
+                endDate: newEndDate ? newEndDate : null,
+
+                createdDate: currentEditingSurvey.createdDate,
+                isPublished: currentEditingSurvey.isPublished,
+                isAnonymous: currentEditingSurvey.isAnonymous
+            };
+
+            $.ajax({
+                url: "https://localhost:7283/api/survey/" + currentEditingSurvey.id,
+                type: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify(updateData), 
+                success: function () {
+                    $("#editSurveyModal").modal('hide');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Güncellendi!',
+                        text: 'Anket başarıyla güncellendi.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    loadSurveys(); 
+                },
+                error: function (xhr) {
+                    console.error("Güncelleme hatası:", xhr.responseText);
+                    Swal.fire('Hata!', 'Güncelleme sırasında bir sorun oluştu.', 'error');
                 }
             });
         });

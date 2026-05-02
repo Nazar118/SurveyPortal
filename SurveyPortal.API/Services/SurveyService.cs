@@ -59,6 +59,11 @@ namespace SurveyPortal.API.Services
                 survey.Description = surveyDto.Description;
                 survey.IsActive = surveyDto.IsActive;
                 survey.CategoryId = surveyDto.CategoryId;
+
+                survey.EndDate = surveyDto.EndDate;
+                survey.IsPublished = surveyDto.IsPublished;
+                survey.IsAnonymous = surveyDto.IsAnonymous;
+
                 survey.UpdatedDate = DateTime.Now;
 
                 _repository.Update(survey);
