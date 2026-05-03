@@ -4,13 +4,13 @@
     {
         public int Id { get; set; }
         public string Title { get; set; } = string.Empty;
-        public string? Description { get; set; } //Tanım
-        public bool IsActive { get; set; }
+        public string? Description { get; set; }
+
+        public string Status { get; set; } = "Draft";
+
         public int CategoryId { get; set; }
         public DateTime CreatedDate { get; set; }
-
         public DateTime? EndDate { get; set; }
-        public bool IsPublished { get; set; }
         public bool IsAnonymous { get; set; }
     }
 }

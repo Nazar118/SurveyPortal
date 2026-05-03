@@ -30,6 +30,9 @@ namespace SurveyPortal.API.Services
 
         public async Task<QuestionDto> CreateQuestionAsync(QuestionDto questionDto)
         {
+            if (string.IsNullOrWhiteSpace(questionDto.QuestionText))
+                throw new ArgumentException("Soru metni boş bırakılamaz!");
+
             var question = _mapper.Map<Question>(questionDto);
             question.CreatedDate = DateTime.Now;
 
@@ -47,12 +50,16 @@ namespace SurveyPortal.API.Services
                 question.IsDeleted = true;
                 question.UpdatedDate = DateTime.Now;
 
-                _repository.Update(question); 
+                _repository.Update(question);
                 await _unitOfWork.CommitAsync();
             }
         }
+
         public async Task UpdateQuestionAsync(int id, QuestionDto questionDto)
         {
+            if (string.IsNullOrWhiteSpace(questionDto.QuestionText))
+                throw new ArgumentException("Soru metni boş bırakılamaz!");
+
             var question = await _repository.GetByIdAsync(id);
             if (question != null && !question.IsDeleted)
             {

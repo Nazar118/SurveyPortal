@@ -12,8 +12,24 @@
         var role = localStorage.getItem("userRole");
 
         if (!token || !role || role.toLowerCase() !== "admin") {
-            window.location.replace("/Home/Index");
+            window.location.replace("/Home/Index"); 
         }
+
+        $.ajaxSetup({
+            beforeSend: function (xhr) {
+                if (token) {
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                }
+            },
+            error: function (jqXHR) {
+                if (jqXHR.status === 401 || jqXHR.status === 403) {
+                    alert("Oturumunuzun süresi doldu veya yetkiniz reddedildi. Lütfen tekrar giriş yapın.");
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("userRole");
+                    window.location.replace("/Home/Index");
+                }
+            }
+        });
     </script>
 </head>
 <body>

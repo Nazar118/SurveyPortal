@@ -21,9 +21,19 @@ namespace SurveyPortal.API.Services
         public async Task<IEnumerable<SurveyDto>> GetAllSurveysAsync()
         {
             var surveys = await _repository.GetAllAsync();
+            var activeSurveys = surveys.Where(s => s.IsDeleted == false).ToList();
 
-            //  Sadece silinmemiş (Soft Delete yapılmamış) anketleri getir
-            var activeSurveys = surveys.Where(s => s.IsDeleted == false);
+            bool isUpdated = false;
+            foreach (var survey in activeSurveys)
+            {
+                if (survey.EndDate.HasValue && survey.EndDate < DateTime.Now && survey.Status != "Closed")
+                {
+                    survey.Status = "Closed";
+                    _repository.Update(survey);
+                    isUpdated = true;
+                }
+            }
+            if (isUpdated) await _unitOfWork.CommitAsync();
 
             return _mapper.Map<IEnumerable<SurveyDto>>(activeSurveys);
         }
@@ -31,9 +41,14 @@ namespace SurveyPortal.API.Services
         public async Task<SurveyDto?> GetSurveyByIdAsync(int id)
         {
             var survey = await _repository.GetByIdAsync(id);
-
-            //  Eğer anket yoksa veya silinmiş olarak işaretlendiyse null dön
             if (survey == null || survey.IsDeleted) return null;
+
+            if (survey.EndDate.HasValue && survey.EndDate < DateTime.Now && survey.Status != "Closed")
+            {
+                survey.Status = "Closed";
+                _repository.Update(survey);
+                await _unitOfWork.CommitAsync();
+            }
 
             return _mapper.Map<SurveyDto>(survey);
         }
@@ -42,6 +57,9 @@ namespace SurveyPortal.API.Services
         {
             var survey = _mapper.Map<Survey>(surveyDto);
             survey.CreatedDate = DateTime.Now;
+
+            // Yönerge 1.2: Yeni anket her zaman "Draft" (Taslak) başlar
+            survey.Status = "Draft";
 
             await _repository.AddAsync(survey);
             await _unitOfWork.CommitAsync();
@@ -57,12 +75,14 @@ namespace SurveyPortal.API.Services
             {
                 survey.Title = surveyDto.Title;
                 survey.Description = surveyDto.Description;
-                survey.IsActive = surveyDto.IsActive;
                 survey.CategoryId = surveyDto.CategoryId;
-
                 survey.EndDate = surveyDto.EndDate;
-                survey.IsPublished = surveyDto.IsPublished;
                 survey.IsAnonymous = surveyDto.IsAnonymous;
+
+                survey.Status = surveyDto.Status;
+
+                if (survey.EndDate.HasValue && survey.EndDate < DateTime.Now)
+                    survey.Status = "Closed";
 
                 survey.UpdatedDate = DateTime.Now;
 
@@ -76,12 +96,11 @@ namespace SurveyPortal.API.Services
             var survey = await _repository.GetByIdAsync(id);
             if (survey != null && !survey.IsDeleted)
             {
-                //  Veriyi kalıcı silmek (Remove) yerine gizliyoruz (Soft Delete)
                 survey.IsDeleted = true;
-                survey.IsActive = false; 
+                survey.Status = "Closed"; // Silinen anket kapanır
                 survey.UpdatedDate = DateTime.Now;
 
-                _repository.Update(survey); 
+                _repository.Update(survey);
                 await _unitOfWork.CommitAsync();
             }
         }

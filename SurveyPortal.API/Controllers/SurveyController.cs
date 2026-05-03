@@ -54,7 +54,7 @@ namespace SurveyPortal.API.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             await _surveyService.DeleteSurveyAsync(id);
-            return Ok(new { Message = "Anket başarıyla silindi (Soft Delete uygulandı)." });
+            return Ok(new { Message = "Anket başarıyla silindi." });
         }
     }
 }

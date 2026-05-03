@@ -17,7 +17,7 @@
             <div class="card-body">
                 <h4 class="font-weight-normal mb-3">Toplam Anket <i class="mdi mdi-chart-line mdi-24px float-right"></i></h4>
                 <h2 class="mb-5" id="dashSurveys">Yükleniyor...</h2>
-                <h6 class="card-text">Sistemde kayıtlı anketler</h6>
+                <h6 class="card-text">Sistemde aktif kayıtlı anketler</h6>
             </div>
         </div>
     </div>
@@ -26,43 +26,57 @@
             <div class="card-body">
                 <h4 class="font-weight-normal mb-3">Toplam Soru <i class="mdi mdi-bookmark-outline mdi-24px float-right"></i></h4>
                 <h2 class="mb-5" id="dashQuestions">0</h2>
-                <h6 class="card-text">API entegrasyonu bekleniyor</h6>
+                <h6 class="card-text">Anketlere eklenen tüm sorular</h6>
             </div>
         </div>
     </div>
     <div class="col-md-4 stretch-card grid-margin">
         <div class="card bg-gradient-success card-img-holder text-white shadow">
             <div class="card-body">
-                <h4 class="font-weight-normal mb-3">Çözülme Sayısı <i class="mdi mdi-diamond mdi-24px float-right"></i></h4>
+                <h4 class="font-weight-normal mb-3">Toplam Çözülme <i class="mdi mdi-diamond mdi-24px float-right"></i></h4>
                 <h2 class="mb-5" id="dashResponses">0</h2>
-                <h6 class="card-text">API entegrasyonu bekleniyor</h6>
+                <h6 class="card-text">Platformdaki toplam katılım sayısı</h6>
             </div>
         </div>
     </div>
-    <div class="row mt-4">
-        <div class="col-12 grid-margin">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h4 class="card-title text-dark font-weight-bold mb-4">
-                        <i class="mdi mdi-clock-outline text-primary"></i> Son Eklenen Anketler
-                    </h4>
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="bg-light">
-                                <tr>
-                                    <th>Anket Başlığı</th>
-                                    <th>Oluşturulma Tarihi</th>
-                                    <th>Durum</th>
-                                    <th>Hızlı İşlem</th>
-                                </tr>
-                            </thead>
-                            <tbody id="latestSurveysTable">
-                                <tr>
-                                    <td colspan="4" class="text-center text-muted">Veriler Yükleniyor...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+</div>
+
+<div class="row mt-2">
+    <div class="col-lg-6 grid-margin stretch-card">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h4 class="card-title text-dark font-weight-bold mb-2">
+                    <i class="mdi mdi-trending-up text-primary"></i> Son 7 Günlük Katılım
+                </h4>
+                <p class="text-muted text-sm mb-4">Platformda son 1 hafta içinde çözülen anket sayısı</p>
+                <div style="position: relative; height:280px; width:100%">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6 grid-margin stretch-card">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <h4 class="card-title text-dark font-weight-bold mb-4">
+                    <i class="mdi mdi-clock-outline text-primary"></i> Son Eklenenler
+                </h4>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Anket Başlığı</th>
+                                <th>Durum</th>
+                                <th>İşlem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="latestSurveysTable">
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">Veriler Yükleniyor...</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -70,51 +84,95 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         $(document).ready(function () {
             $.ajax({
                 url: "https://localhost:7283/api/dashboard/stats",
                 type: "GET",
                 success: function (stats) {
+
                     $("#dashSurveys").text(stats.totalSurveys);
-
                     $("#dashQuestions").text(stats.totalQuestions);
-                    $("#dashQuestions").next("h6").text("Anketlere eklenen tüm sorular");
-
                     $("#dashResponses").text(stats.totalResponses);
-                    $("#dashResponses").next("h6").text("Kullanıcıların verdiği toplam yanıt");
+                    
+
+                    var popularTitle = stats.mostPopularSurveyTitle.length > 40
+                        ? stats.mostPopularSurveyTitle.substring(0, 40) + "..."
+                        : stats.mostPopularSurveyTitle;
+                    $("#dashPopular").text(popularTitle);
 
                     var tbody = $("#latestSurveysTable");
                     tbody.empty();
 
                     if(stats.latestSurveys.length === 0) {
-                         tbody.append('<tr><td colspan="4" class="text-center text-muted">Sistemde henüz anket bulunmuyor.</td></tr>');
+                         tbody.append('<tr><td colspan="3" class="text-center text-muted">Anket bulunmuyor.</td></tr>');
                     } else {
                          $.each(stats.latestSurveys, function (index, survey) {
-                             var date = new Date(survey.createdDate).toLocaleDateString("tr-TR");
+                             var statusBadge = "";
+                             if (survey.status === "Draft") {
+                                 statusBadge = '<label class="badge badge-warning text-dark">Taslak</label>';
+                             } else if (survey.status === "Active") {
+                                 statusBadge = '<label class="badge badge-success text-white">Yayında</label>';
+                             } else if (survey.status === "Closed") {
+                                 statusBadge = '<label class="badge badge-danger text-white">Kapalı</label>';
+                             }
 
-                             var statusBadge = survey.isActive
-                                 ? '<label class="badge badge-success">Aktif</label>'
-                                 : '<label class="badge badge-secondary">Pasif</label>';
+                             var shortTitle = survey.title.length > 20 ? survey.title.substring(0, 20) + "..." : survey.title;
 
                              tbody.append(`
                                  <tr>
-                                     <td class="font-weight-bold">${survey.title}</td>
-                                     <td>${date}</td>
+                                     <td class="font-weight-bold text-dark" title="${survey.title}">${shortTitle}</td>
                                      <td>${statusBadge}</td>
                                      <td>
-                                         <a href="/Admin/Results/${survey.id}" class="btn btn-sm btn-outline-warning text-dark">
-                                            <i class="mdi mdi-chart-pie"></i> Sonuçlar
+                                         <!-- Butonun ezilmesini engelleyen yeni görünüm -->
+                                         <a href="/Admin/Results/${survey.id}" class="btn btn-sm btn-outline-primary shadow-sm" title="Sonuçlar">
+                                            <i class="mdi mdi-chart-pie"></i> İncele
                                          </a>
                                      </td>
                                  </tr>
                              `);
                          });
                     }
+
+                    var ctx = document.getElementById('activityChart').getContext('2d');
+
+                    var chartLabels = stats.activityLast7Days.map(a => a.date);
+                    var chartData = stats.activityLast7Days.map(a => a.responseCount);
+
+                    new Chart(ctx, {
+                        type: 'bar', 
+                        data: {
+                            labels: chartLabels,
+                            datasets: [{
+                                label: 'Çözülen Anket Sayısı',
+                                data: chartData,
+                                backgroundColor: '#b66dff', 
+                                borderRadius: 6, 
+                                barThickness: 25 
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                x: { grid: { display: false } },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { stepSize: 1 },
+                                    grid: { borderDash: [2, 4], color: "#ebedf2" }
+                                }
+                            }
+                        }
+                    });
+
                 },
                 error: function (xhr) {
                     console.error("Dashboard verileri çekilemedi:", xhr);
-                    $("#dashSurveys, #dashQuestions, #dashResponses").text("Hata!");
+                    $("#dashSurveys, #dashPopular, #dashResponses").text("Hata!");
                 }
             });
         });
