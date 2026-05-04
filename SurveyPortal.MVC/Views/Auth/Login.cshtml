@@ -1,49 +1,202 @@
 ﻿@{
-    ViewData["Title"] = "Giriş Yap";
+    Layout = null;
 }
 
-<div class="row flex-grow w-100">
-    <div class="col-lg-4 mx-auto">
-        <div class="auth-form-light text-left p-5 shadow rounded">
-            <div class="brand-logo mb-4 text-center">
-                <h2 class="text-primary font-weight-bold">SurveyPortal</h2>
-            </div>
-            <h4 class="text-center">Hoş Geldiniz!</h4>
-            <h6 class="font-weight-light text-center mb-4">Devam etmek için lütfen giriş yapın.</h6>
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Giriş Yap - SurveyPortal</title>
 
-            <form class="pt-3" id="loginForm">
-                <div class="form-group mb-3">
-                    <input type="text" class="form-control form-control-lg" id="username" placeholder="Kullanıcı Adınız" required>
+    <link rel="stylesheet" href="~/assets/vendors/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="~/assets/vendors/css/vendor.bundle.base.css">
+    <link rel="stylesheet" href="~/assets/css/style.css">
+
+    <style>
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .split-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .left-side {
+            flex: 1.2;
+            background: linear-gradient(135deg, #b66dff 0%, #7d2ae8 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 10%;
+            position: relative;
+            overflow: hidden;
+        }
+
+            .left-side::before {
+                content: '';
+                position: absolute;
+                top: -10%;
+                left: -10%;
+                width: 400px;
+                height: 400px;
+                background: rgba(255, 255, 255, 0.1);
+                border-radius: 50%;
+            }
+
+            .left-side::after {
+                content: '';
+                position: absolute;
+                bottom: -5%;
+                right: -5%;
+                width: 300px;
+                height: 300px;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 50%;
+            }
+
+        .brand-title {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-bottom: 20px;
+            z-index: 1;
+        }
+
+        .brand-subtitle {
+            font-size: 1.2rem;
+            line-height: 1.6;
+            opacity: 0.9;
+            z-index: 1;
+        }
+
+        .right-side {
+            flex: 1;
+            background: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .auth-form-wrapper {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        .modern-input {
+            border: 2px solid #eef0f8;
+            border-radius: 12px;
+            padding: 15px 20px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: #fafbfe;
+        }
+
+            .modern-input:focus {
+                border-color: #b66dff;
+                background: #fff;
+                box-shadow: 0 0 0 4px rgba(182, 109, 255, 0.1);
+            }
+
+        .modern-btn {
+            border-radius: 12px;
+            padding: 15px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+            .modern-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(182, 109, 255, 0.3);
+            }
+
+        @@media (max-width: 768px) {
+            .left-side {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="split-container">
+
+        <div class="left-side">
+            <h1 class="brand-title"><i class="mdi mdi-poll"></i> SurveyPortal</h1>
+            <p class="brand-subtitle">Görüşlerinizle geleceği şekillendirin. Modern anket platformumuza giriş yaparak fikirlerinizi dünyayla paylaşın veya yeni içgörüler keşfedin.</p>
+        </div>
+
+        <div class="right-side">
+            <div class="auth-form-wrapper">
+                <div class="text-center mb-5">
+                    <h2 class="font-weight-bold text-dark mb-2">Hoş Geldiniz! 👋</h2>
+                    <p class="text-muted">Devam etmek için lütfen giriş yapın.</p>
                 </div>
-                <div class="form-group mb-4">
-                    <input type="password" class="form-control form-control-lg" id="password" placeholder="Şifreniz" required>
-                </div>
-                <div class="mt-3 d-grid gap-2">
-                    <button type="button" id="btnLogin" class="btn btn-block btn-gradient-primary btn-lg font-weight-medium auth-form-btn">
+
+                <form id="loginForm">
+                    <div class="form-group mb-4">
+                        <label class="text-muted font-weight-bold mb-2" style="font-size: 0.9rem;">Kullanıcı Adı</label>
+                        <input type="text" class="form-control modern-input" id="username" placeholder="Kullanıcı adınızı girin..." required>
+                    </div>
+
+                    <div class="form-group mb-5">
+                        <label class="text-muted font-weight-bold mb-2" style="font-size: 0.9rem;">Şifre</label>
+                        <input type="password" class="form-control modern-input" id="password" placeholder="Şifrenizi girin..." required>
+                    </div>
+
+                    <button type="button" id="btnLogin" class="btn btn-gradient-primary btn-block w-100 modern-btn mb-4">
                         GİRİŞ YAP
                     </button>
-                    <div class="text-center mt-4 font-weight-light">
-                        Hesabınız yok mu? <a href="/Auth/Register" class="text-primary">Hemen Kayıt Olun</a>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
 
-@section Scripts {
+                    <div class="text-center text-muted">
+                        Hesabınız yok mu? <a href="/Auth/Register" class="text-primary font-weight-bold" style="text-decoration: none;">Hemen Kayıt Olun</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
         $(document).ready(function () {
+
+            if (localStorage.getItem("token")) {
+                var role = localStorage.getItem("userRole");
+                if (role && role.toLowerCase() === "admin") {
+                    window.location.href = "/Admin/Index";
+                } else {
+                    window.location.href = "/Home/Index";
+                }
+            }
+
             $("#btnLogin").click(function (e) {
                 e.preventDefault();
 
-                var usernameInput = $("#username").val();
-                var passwordInput = $("#password").val();
+                var usernameInput = $("#username").val().trim();
+                var passwordInput = $("#password").val().trim();
 
                 if (!usernameInput || !passwordInput) {
-                    alert("Lütfen kullanıcı adı ve şifrenizi giriniz.");
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Eksik Bilgi',
+                        text: 'Lütfen kullanıcı adı ve şifrenizi giriniz.',
+                        confirmButtonColor: '#b66dff'
+                    });
                     return;
                 }
+
+                var btn = $(this);
+                btn.prop("disabled", true).html('<i class="mdi mdi-loading mdi-spin"></i> Giriş Yapılıyor...');
 
                 $.ajax({
                     url: "https://localhost:7283/api/auth/login",
@@ -54,41 +207,44 @@
                         password: passwordInput
                     }),
                     success: function (res) {
-                        // 1. Gelen bileti (Token) ve ROLÜ kaydet
-                        localStorage.setItem("token", res.token);
-                        localStorage.setItem("userRole", res.role); 
+                        var gelenRol = res.role || res.Role || "";
+                        var gelenToken = res.token || res.Token || "";
 
-                        var isAdmin = (res.role && res.role.toLowerCase() === "admin");
+                        localStorage.setItem("token", gelenToken);
+                        localStorage.setItem("userRole", gelenRol);
 
-                        var redirectMessage = isAdmin
-                            ? 'Yönetici paneline yönlendiriliyorsunuz...'
-                            : 'Ana sayfaya yönlendiriliyorsunuz...';
+                        var isAdmin = (gelenRol.toLowerCase() === "admin");
+                        var redirectMessage = isAdmin ? 'Yönetici paneline yönlendiriliyorsunuz...' : 'Ana sayfaya yönlendiriliyorsunuz...';
 
                         Swal.fire({
                             icon: 'success',
-                            title: 'Giriş Başarılı!',
+                            title: 'Başarılı!',
                             text: redirectMessage,
                             showConfirmButton: false,
                             timer: 1500
                         }).then(function() {
-                            if (isAdmin) {
-                                window.location.href = "/Admin/Index"; 
-                            } else {
-                                window.location.href = "/Home/Index"; 
-                            }
+                            window.location.href = isAdmin ? "/Admin/Index" : "/Home/Index";
                         });
                     },
                     error: function (xhr) {
+                        btn.prop("disabled", false).text("GİRİŞ YAP");
                         Swal.fire({
                             icon: 'error',
                             title: 'Giriş Başarısız!',
                             text: 'Kullanıcı adı veya şifre hatalı.',
                             confirmButtonColor: '#b66dff'
                         });
-                        console.error(xhr);
                     }
                 });
             });
+
+            $('#password').keypress(function (e) {
+                if (e.which == 13) {
+                    $('#btnLogin').click();
+                    return false;
+                }
+            });
         });
     </script>
-}
+</body>
+</html>

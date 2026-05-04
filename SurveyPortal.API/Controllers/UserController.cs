@@ -1,57 +1,98 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SurveyPortal.API.Data; 
 using SurveyPortal.API.Models;
-using SurveyPortal.API.Repositories.Interfaces;
+using System.Security.Claims;
 
 namespace SurveyPortal.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize] 
     public class UserController : ControllerBase
     {
-        private readonly IGenericRepository<AppUser> _userRepo;
+        private readonly UserManager<AppUser> _userManager;
 
-        public UserController(IGenericRepository<AppUser> userRepo)
+        public UserController(UserManager<AppUser> userManager)
         {
-            _userRepo = userRepo;
+            _userManager = userManager;
         }
 
+        [HttpGet("me")]
+        public async Task<IActionResult> GetMyProfile([FromServices] AppDbContext context)
+        {
+            // JWT Token'dan kimliği al
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound("Kullanıcı bulunamadı.");
+
+            var roles = await _userManager.GetRolesAsync(user);
+            string mainRole = roles.Contains("Admin") ? "Admin" : "Kullanıcı";
+
+            var mySurveys = await context.Set<SurveyResponse>()
+                .Include(r => r.Survey)
+                .Where(r => r.AppUserId == userId)
+                .OrderByDescending(r => r.CreatedDate)
+                .Select(r => new {
+                    SurveyId = r.SurveyId,
+                    SurveyTitle = r.Survey!.Title,
+                    CompletedDate = r.CreatedDate
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                Username = user.UserName,
+                Email = user.Email,
+                Role = mainRole,
+                ParticipatedSurveys = mySurveys
+            });
+        }
+
+
+        [Authorize(Roles = "Admin")] 
         [HttpGet]
         public async Task<IActionResult> GetUsers()
         {
-            var users = await _userRepo.GetAllAsync();
+            var users = _userManager.Users.ToList();
+            var result = new List<object>();
 
-            var result = users.Select(u => new
+            foreach (var u in users)
             {
-                id = u.Id,
-                userName = u.UserName, 
-                email = u.Email,
-                role = "Kullanıcı" 
-            });
+                var roles = await _userManager.GetRolesAsync(u);
+                string mainRole = roles.Contains("Admin") ? "Admin" : "Kullanıcı";
+
+                result.Add(new
+                {
+                    id = u.Id,
+                    userName = u.UserName,
+                    email = u.Email,
+                    role = mainRole,
+                    isActive = !await _userManager.IsLockedOutAsync(u)
+                });
+            }
 
             return Ok(result);
         }
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteUser(string id)
+
+        [Authorize(Roles = "Admin")] // Admin kilidini buraya taşıdık
+        [HttpPut("toggle-status/{id}")]
+        public async Task<IActionResult> ToggleStatus(string id)
         {
-            try
+            var user = await _userManager.FindByIdAsync(id);
+            if (user == null) return NotFound("Kullanıcı bulunamadı.");
+
+            if (await _userManager.IsLockedOutAsync(user))
             {
-                var users = await _userRepo.GetAllAsync();
-                var user = users.FirstOrDefault(u => u.Id == id);
-
-                if (user == null)
-                {
-                    return NotFound("Kullanıcı bulunamadı.");
-                }
-
-                _userRepo.Remove(user);
-                await _userRepo.SaveChangesAsync();
-
-                return Ok();
+                await _userManager.SetLockoutEndDateAsync(user, null);
+                return Ok(new { Message = "Kullanıcı engeli kaldırıldı." });
             }
-            catch (Exception ex)
+            else
             {
-                // Veritabanı tokat atarsa, çökmesini engelliyor ve hatayı biz yakalıyoruz.
-                return BadRequest("Bu kullanıcı silinemez! Muhtemelen sisteme eklediği anketler veya çözdüğü sorular var. Lütfen önce kullanıcının hareketlerini silin.");
+                await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.UtcNow.AddYears(100));
+                return Ok(new { Message = "Kullanıcı başarıyla engellendi." });
             }
         }
     }

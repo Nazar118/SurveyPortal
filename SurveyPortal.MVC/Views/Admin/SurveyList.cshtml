@@ -215,6 +215,9 @@
                                     <a href="/Admin/Results/${survey.id}" class="btn btn-sm btn-warning btn-icon-text text-dark">
                                        <i class="mdi mdi-chart-pie btn-icon-prepend"></i> Sonuçlar
                                     </a>
+                                            <button onclick="cloneSurvey('${survey.id}')" class="btn btn-sm btn-secondary btn-icon-text text-dark me-1" title="Kopyala">
+                                              <i class="mdi mdi-content-copy btn-icon-prepend"></i> Kopyala
+                                            </button>
                                     <button onclick="deleteSurvey('${survey.id}')" class="btn btn-sm btn-danger btn-icon-text">
                                         <i class="mdi mdi-delete btn-icon-prepend"></i> Sil
                                     </button>
@@ -370,5 +373,29 @@
                 }
             });
         });
+        function cloneSurvey(id) {
+            Swal.fire({
+                title: 'Anketi Kopyala',
+                text: "Bu anket tüm soruları ve şıklarıyla birlikte kopyalanacak. Onaylıyor musunuz?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#1bcfb4',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Evet, Kopyala!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Kopyalanıyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    $.ajax({
+                        url: "https://localhost:7283/api/survey/" + id + "/clone",
+                        type: "POST",
+                        success: function () {
+                            Swal.fire({ icon: 'success', title: 'Kopyalandı!', timer: 1500, showConfirmButton: false });
+                            loadSurveys(); // Tabloyu yenile
+                        },
+                        error: function () { Swal.fire('Hata!', 'Kopyalama başarısız oldu.', 'error'); }
+                    });
+                }
+            });
+        }
     </script>
 }

@@ -23,6 +23,22 @@ namespace SurveyPortal.MVC.Controllers
             ViewBag.SurveyId = id;
             return View();
         }
+
+        public IActionResult ThankYou()
+        {
+            return View();
+        }
+
+        public IActionResult Profile()
+        {
+            return View();
+        }
+        public IActionResult UserResult(int id)
+        {
+            ViewBag.SurveyId = id;
+            return View();
+        }
+
         public IActionResult Privacy()
         {
             return View();

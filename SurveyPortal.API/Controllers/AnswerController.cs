@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
+using SurveyPortal.API.Data; // 🔥 İŞTE EKSİK OLAN SATIR BURADA!
 using SurveyPortal.API.DTOs;
 using SurveyPortal.API.Models;
 using SurveyPortal.API.Repositories.Interfaces;
@@ -66,6 +67,70 @@ namespace SurveyPortal.API.Controllers
             await _answerService.SaveAnswersAsync(surveyResponse.Id, answersDto);
 
             return Ok(new { Message = "Cevaplarınız başarıyla kaydedildi. Katılımınız için teşekkürler!" });
+        }
+
+        // 🔥 5. ADIM: KULLANICIYA ÖZEL GELİŞMİŞ SONUÇ EKRANI (YÜZDELİKLER VE KİŞİSEL SEÇİMLER)
+        [HttpGet("result/{surveyId}")]
+        public async Task<IActionResult> GetSurveyResultsForUser(int surveyId, [FromServices] AppDbContext context)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            // Anketi ve sorularını çek
+            var survey = await context.Surveys
+                .Include(s => s.Questions.Where(q => !q.IsDeleted))
+                    .ThenInclude(q => q.Options.Where(o => !o.IsDeleted))
+                .FirstOrDefaultAsync(s => s.Id == surveyId && !s.IsDeleted);
+
+            if (survey == null) return NotFound("Anket bulunamadı.");
+
+            // Toplam katılımcı sayısı
+            var totalParticipants = await context.Set<SurveyResponse>().CountAsync(r => r.SurveyId == surveyId);
+
+            // Giriş yapan kullanıcının bu anketteki KENDİ cevapları
+            var userResponses = userId != null
+                ? await context.Set<Answer>().Include(a => a.SurveyResponse)
+                    .Where(a => a.SurveyResponse.SurveyId == surveyId && a.SurveyResponse.AppUserId == userId)
+                    .ToListAsync()
+                : new List<Answer>();
+
+            // Ankete verilen TÜM cevaplar (Yüzde hesabı için)
+            var allAnswers = await context.Set<Answer>().Include(a => a.SurveyResponse)
+                .Where(a => a.SurveyResponse.SurveyId == surveyId).ToListAsync();
+
+            var result = new
+            {
+                SurveyTitle = survey.Title,
+                TotalParticipants = totalParticipants,
+                Questions = survey.Questions.OrderBy(q => q.OrderNumber).Select(q => new
+                {
+                    q.Id,
+                    q.QuestionText,
+                    q.QuestionType,
+                    // Metin soruları için: Tüm cevapları ve kullanıcının kendi cevabını gönder
+                    TextAnswers = q.QuestionType == 0
+                        ? allAnswers.Where(a => a.QuestionId == q.Id && !string.IsNullOrWhiteSpace(a.TextAnswer)).Select(a => a.TextAnswer).ToList()
+                        : null,
+                    UserTextAnswer = q.QuestionType == 0
+                        ? userResponses.FirstOrDefault(a => a.QuestionId == q.Id)?.TextAnswer
+                        : null,
+
+                    // Seçmeli sorular için: Oy sayıları, Yüzdelik dilimler ve kullanıcının seçimi
+                    Options = q.QuestionType != 0 ? q.Options.Select(o => {
+                        var voteCount = allAnswers.Count(a => a.QuestionId == q.Id && a.OptionId == o.Id);
+                        var percentage = totalParticipants == 0 ? 0 : Math.Round((double)voteCount / totalParticipants * 100);
+                        return new
+                        {
+                            o.Id,
+                            o.OptionText,
+                            VoteCount = voteCount,
+                            Percentage = percentage,
+                            IsUserChoice = userResponses.Any(a => a.QuestionId == q.Id && a.OptionId == o.Id)
+                        };
+                    }).OrderByDescending(o => o.VoteCount).ToList() : null // En çok oy alan en üstte gelsin
+                })
+            };
+
+            return Ok(result);
         }
     }
 }

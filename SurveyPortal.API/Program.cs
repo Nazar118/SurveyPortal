@@ -1,21 +1,22 @@
-using Microsoft.AspNetCore.Identity;
+ï»¿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using SurveyPortal.API.Models;
-using Microsoft.EntityFrameworkCore; 
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using SurveyPortal.API.Data;          
+using SurveyPortal.API.Data;
 using SurveyPortal.API.Repositories.Concrete;
 using SurveyPortal.API.Repositories.Interfaces;
-using Microsoft.OpenApi.Models; //  Swagger Kilit butonu için gerekli kütüphane
+using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Diagnostics; // ðŸ”¥ YENÄ°: Hata yakalama (Exception Handling) iÃ§in gerekli kÃ¼tÃ¼phane
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
     {
-        policy.AllowAnyOrigin() // Herkese izin ver 
+        policy.AllowAnyOrigin()
               .AllowAnyHeader()
               .AllowAnyMethod();
     });
@@ -24,7 +25,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Repository ve UnitOfWork kayýtlarý (Dependency Injection)
+// Repository ve UnitOfWork kayÄ±tlarÄ±
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<SurveyPortal.API.Services.ISurveyService, SurveyPortal.API.Services.SurveyService>();
@@ -42,10 +43,10 @@ builder.Services.AddAutoMapper(config =>
 // --- IDENTITY AYARLARI ---
 builder.Services.AddIdentity<AppUser, AppRole>(options =>
 {
-    options.Password.RequireDigit = true; // Þifrede rakam zorunlu
-    options.Password.RequireLowercase = true; 
-    options.Password.RequireUppercase = true; 
-    options.Password.RequiredLength = 6; 
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequiredLength = 6;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
@@ -80,7 +81,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "Lütfen 'Bearer' yazýp bir boþluk býraktýktan sonra Token'ýnýzý yapýþtýrýn. \r\n\r\nÖrnek: 'Bearer eyJhbGci...'",
+        Description = "LÃ¼tfen 'Bearer' yazÄ±p bir boÅŸluk bÄ±raktÄ±ktan sonra Token'Ä±nÄ±zÄ± yapÄ±ÅŸtÄ±rÄ±n. \r\n\r\nÃ–rnek: 'Bearer eyJhbGci...'",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
@@ -107,6 +108,29 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler(appError =>
+{
+    appError.Run(async context =>
+    {
+        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+        context.Response.ContentType = "application/json";
+
+        var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
+        if (contextFeature != null)
+        {
+
+            var errorResponse = new
+            {
+                success = false,
+                message = "Sunucu tarafÄ±nda beklenmeyen bir hata oluÅŸtu. LÃ¼tfen daha sonra tekrar deneyin.",
+                detail = contextFeature.Error.Message // GeliÅŸtirici olarak hatanÄ±n sebebini gÃ¶rebilmen iÃ§in
+            };
+
+            await context.Response.WriteAsJsonAsync(errorResponse);
+        }
+    });
+});
 
 if (app.Environment.IsDevelopment())
 {

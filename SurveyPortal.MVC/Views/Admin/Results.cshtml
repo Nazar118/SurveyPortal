@@ -23,10 +23,7 @@
     </li>
 </ul>
 
-<!-- Sekme İçerikleri -->
 <div class="tab-content" id="pills-tabContent">
-
-    <!-- 1. SEKME: GRAFİKLER -->
     <div class="tab-pane fade show active" id="pills-grafik" role="tabpanel">
         <div class="row mb-3">
             <div class="col-12">
@@ -45,11 +42,17 @@
         </div>
     </div>
 
-    <!-- 2. SEKME: KULLANICI DETAYLARI -->
     <div class="tab-pane fade" id="pills-kullanici" role="tabpanel">
         <div class="card shadow-sm border-0">
             <div class="card-body">
-                <h4 class="card-title mb-4">Kim Ne Cevap Verdi?</h4>
+                <!-- 🔥 EXCEL BUTONUNU BURAYA YERLEŞTİRDİM 🔥 -->
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="card-title m-0">Kim Ne Cevap Verdi?</h4>
+                    <button class="btn btn-sm btn-success font-weight-bold shadow-sm" onclick="exportToCSV()">
+                        <i class="mdi mdi-file-excel"></i> Excel / CSV İndir
+                    </button>
+                </div>
+
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead class="bg-light">
@@ -70,7 +73,6 @@
             </div>
         </div>
     </div>
-
 </div>
 
 <input type="hidden" id="hiddenSurveyId" value="@ViewBag.SurveyId" />
@@ -85,9 +87,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body bg-light p-4">
-                <ul class="list-group list-group-flush rounded shadow-sm" id="modalAnswersList">
-                    <!-- Javascript ile doldurulacak -->
-                </ul>
+                <ul class="list-group list-group-flush rounded shadow-sm" id="modalAnswersList"></ul>
             </div>
             <div class="modal-footer border-0">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
@@ -101,6 +101,7 @@
 
     <script>
         var currentSurveyId = $("#hiddenSurveyId").val();
+        var globalUserData = []; // 🔥 EKSİK OLAN DEĞİŞKENİ BURAYA EKLEDİM
 
         $(document).ready(function () {
             loadResults();
@@ -126,7 +127,6 @@
                     }
 
                     $.each(res.questions, function (index, q) {
-
                         if (q.questionType === 0) {
                              var textHtml = `
                                 <div class="col-md-6 grid-margin stretch-card mb-3">
@@ -142,7 +142,6 @@
                              container.append(textHtml);
                         }
                         else if (q.options && q.options.length > 0) {
-
                             var maxVotes = Math.max(...q.options.map(o => o.voteCount));
                             var listHtml = '<div class="mt-2">';
 
@@ -155,11 +154,7 @@
 
                                 listHtml += `
                                     <div class="position-relative mb-2 border ${borderClass} rounded shadow-sm" style="background-color: #fdfdfd; overflow: hidden;">
-
-                                        <!-- 🔥 DEĞİŞİM 1: Genişliği baştan 0% veriyoruz ki animasyon çalışabilsin. data-width ile asıl değeri saklıyoruz -->
                                         <div class="progress-fill" data-width="${opt.percentage}%" style="position: absolute; top: 0; left: 0; height: 100%; width: 0%; background-color: ${fillBg}; transition: width 1.2s ease-out;"></div>
-
-                                        <!-- 🔥 DEĞİŞİM 2: p-3 yerine py-2 (daha ince dikey boşluk), width limiti kaldırıldı, nowrap eklendi -->
                                         <div class="position-relative d-flex justify-content-between align-items-center py-2 px-3" style="z-index: 2;">
                                             <div class="d-flex align-items-center pe-2">
                                                 ${iconHtml}
@@ -209,7 +204,9 @@
                  url: "https://localhost:7283/api/result/users/" + currentSurveyId,
                  type: "GET",
                  success: function (data) {
+                     globalUserData = data; // 🔥 DATA'YI EXCEL İÇİN KAYDETTİĞİMİZ YER 🔥
                      tbody.empty();
+
                      if(data.length === 0) {
                          tbody.append('<tr><td colspan="4" class="text-center text-muted">Bu anketi henüz kimse çözmemiş.</td></tr>');
                          return;
@@ -264,13 +261,41 @@
             var div = $(`#div_detail_${userId}`);
 
             if (tr.is(':visible')) {
-                div.slideUp(300, function() {
-                    tr.hide();
-                });
+                div.slideUp(300, function() { tr.hide(); });
             } else {
                 tr.show();
                 div.slideDown(300);
             }
+        }
+
+        function exportToCSV() {
+            if (!globalUserData || globalUserData.length === 0) {
+                Swal.fire('Uyarı', 'İndirilecek yanıt bulunmuyor!', 'warning');
+                return;
+            }
+
+            var csvContent = "\uFEFF";
+            csvContent += "Kullanici Adi,Katilim Tarihi,Soru,Verilen Cevap\n";
+
+            globalUserData.forEach(function(user) {
+                var userName = user.userName.replace(/,/g, " ");
+                var date = new Date(user.submissionDate).toLocaleDateString("tr-TR");
+
+                user.answers.forEach(function(ans) {
+                    var q = ans.question ? ans.question.replace(/,/g, " ") : "";
+                    var a = ans.answer ? ans.answer.replace(/,/g, " ") : "Cevap verilmemiş";
+                    csvContent += `${userName},${date},${q},${a}\n`;
+                });
+            });
+
+            var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", "Anket_Sonuclari.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 }

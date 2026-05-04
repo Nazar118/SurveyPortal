@@ -152,24 +152,23 @@
 @section Scripts {
     <script>
         var currentSurveyId = parseInt($("#currentSurveyId").text());
-        var pendingOptions = []; // Form anında eklenen şıkları geçici olarak tutacağımız dizi
+        var pendingOptions = [];
+        var currentQuestionsList = []; 
 
         $(document).ready(function () {
             loadQuestions();
 
-            // 🔥 DİNAMİK ALAN: Soru tipi değiştiğinde şık bölümünü aç/kapa
             $("#questionType").change(function () {
                 var selectedType = parseInt($(this).val());
                 if (selectedType === 1 || selectedType === 2) {
                     $("#dynamicOptionsSection").slideDown();
                 } else {
                     $("#dynamicOptionsSection").slideUp();
-                    pendingOptions = []; // Tipi metin yaparsa şıkları sıfırla
+                    pendingOptions = [];
                     renderLiveOptions();
                 }
             });
 
-            // Enter tuşuna basınca şık eklesin
             $("#liveNewOptionText").keypress(function(e){
                 if(e.which === 13){
                     e.preventDefault();
@@ -177,7 +176,6 @@
                 }
             });
 
-            // Modal kapanınca formu temizle
             $('#addQuestionModal').on('hidden.bs.modal', function () {
                 $("#addQuestionForm")[0].reset();
                 $("#dynamicOptionsSection").hide();
@@ -186,10 +184,13 @@
             });
         });
 
-        // --- FORM İÇİNDE ŞIK EKLEME/SİLME MANTIĞI ---
         $("#btnAddLiveOption").click(function () {
             var optText = $("#liveNewOptionText").val().trim();
-            if (!optText) return;
+
+            if (!optText) {
+                Swal.fire('Boş Şık Hatası', 'Şık metni boş bırakılamaz. Lütfen geçerli bir seçenek yazın.', 'warning');
+                return;
+            }
 
             pendingOptions.push(optText);
             $("#liveNewOptionText").val("").focus();
@@ -222,7 +223,6 @@
             });
         }
 
-        // --- TABLOYU DOLDURAN ANA FONKSİYON ---
         function loadQuestions() {
             $.ajax({
                 url: "https://localhost:7283/api/question/survey/" + currentSurveyId,
@@ -237,6 +237,7 @@
                     }
 
                     data.sort((a, b) => a.orderNumber - b.orderNumber);
+                    currentQuestionsList = data; 
 
                     $.each(data, function (index, q) {
                         var typeText = "Bilinmiyor";
@@ -246,15 +247,24 @@
 
                         var requiredBadge = q.isRequired ? '<span class="badge badge-danger">Evet</span>' : '<span class="badge badge-secondary">Hayır</span>';
 
-                        var actionButtons = `<button onclick="deleteQuestion('${q.id}')" class="btn btn-sm btn-danger" title="Soruyu Sil"><i class="mdi mdi-delete"></i> Sil</button>`;
+                        var upBtn = index > 0
+                            ? `<button onclick="moveQuestion(${index}, 'up')" class="btn btn-sm btn-inverse-primary p-1 me-1" title="Yukarı Taşı"><i class="mdi mdi-arrow-up"></i></button>`
+                            : `<button class="btn btn-sm btn-inverse-secondary p-1 me-1" disabled><i class="mdi mdi-arrow-up"></i></button>`;
+
+                        var downBtn = index < data.length - 1
+                            ? `<button onclick="moveQuestion(${index}, 'down')" class="btn btn-sm btn-inverse-primary p-1 me-2" title="Aşağı Taşı"><i class="mdi mdi-arrow-down"></i></button>`
+                            : `<button class="btn btn-sm btn-inverse-secondary p-1 me-2" disabled><i class="mdi mdi-arrow-down"></i></button>`;
+
+                        var actionButtons = upBtn + downBtn;
 
                         if (q.questionType === 1 || q.questionType === 2) {
-                            actionButtons = `
+                            actionButtons += `
                                 <button onclick="openOptionsModal('${q.id}')" class="btn btn-sm btn-warning me-2 text-dark font-weight-bold" title="Şıkları Yönet">
                                     <i class="mdi mdi-format-list-bulleted"></i> Şıklar
                                 </button>
-                            ` + actionButtons;
+                            `;
                         }
+                        actionButtons += `<button onclick="deleteQuestion('${q.id}')" class="btn btn-sm btn-danger" title="Soruyu Sil"><i class="mdi mdi-delete"></i> Sil</button>`;
 
                         var row = `
                             <tr>
@@ -262,7 +272,7 @@
                                 <td class="font-weight-bold">${q.questionText}</td>
                                 <td>${typeText}</td>
                                 <td>${requiredBadge}</td>
-                                <td>${actionButtons}</td>
+                                <td><div class="d-flex align-items-center">${actionButtons}</div></td>
                             </tr>
                         `;
                         tbody.append(row);
@@ -271,6 +281,26 @@
                 error: function () {
                     $("#questionTableBody").html('<tr><td colspan="5" class="text-center text-danger">Sorular çekilirken bir hata oluştu!</td></tr>');
                 }
+            });
+        }
+
+        function moveQuestion(index, direction) {
+            var q1 = currentQuestionsList[index];
+            var q2 = direction === 'up' ? currentQuestionsList[index - 1] : currentQuestionsList[index + 1];
+
+            var q1Data = { questionText: q1.questionText, questionType: q1.questionType, isRequired: q1.isRequired, surveyId: q1.surveyId, orderNumber: q2.orderNumber };
+            var q2Data = { questionText: q2.questionText, questionType: q2.questionType, isRequired: q2.isRequired, surveyId: q2.surveyId, orderNumber: q1.orderNumber };
+
+            Swal.fire({ title: 'Sıralanıyor...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+
+            $.when(
+                $.ajax({ url: "https://localhost:7283/api/question/" + q1.id, type: "PUT", contentType: "application/json", data: JSON.stringify(q1Data) }),
+                $.ajax({ url: "https://localhost:7283/api/question/" + q2.id, type: "PUT", contentType: "application/json", data: JSON.stringify(q2Data) })
+            ).done(function() {
+                Swal.close();
+                loadQuestions();
+            }).fail(function() {
+                Swal.fire('Hata!', 'Sıralama değiştirilirken bir sorun oluştu.', 'error');
             });
         }
 
@@ -303,7 +333,6 @@
             var btn = $(this);
             btn.prop("disabled", true).html('<i class="spinner-border spinner-border-sm"></i> Kaydediliyor...');
 
-            // 1. Önce Soruyu Kaydet
             $.ajax({
                 url: "https://localhost:7283/api/question",
                 type: "POST",
@@ -337,7 +366,7 @@
                         });
 
                     } else {
-                        finishSaving(); // Şık yoksa işlemi bitir
+                        finishSaving();
                     }
                 },
                 error: function (xhr) {
@@ -349,7 +378,7 @@
             function finishSaving() {
                 $("#addQuestionModal").modal('hide');
                 btn.prop("disabled", false).html('<i class="mdi mdi-content-save"></i> Soruyu Kaydet');
-                Swal.fire({ icon: 'success', title: 'Mükemmel!', text: 'Soru (ve varsa şıkları) başarıyla eklendi.', timer: 1500, showConfirmButton: false });
+                Swal.fire({ icon: 'success', title: 'Mükemmel!', text: 'Soru başarıyla eklendi.', timer: 1500, showConfirmButton: false });
                 loadQuestions();
             }
         });
@@ -398,8 +427,9 @@
         }
 
         $("#btnSaveOption").click(function () {
-            var text = $("#newOptionText").val();
+            var text = $("#newOptionText").val().trim();
             var qId = $("#currentQuestionIdForOptions").val();
+
             if (!text) { Swal.fire('Uyarı', 'Lütfen bir şık metni yazın!', 'warning'); return; }
 
             var nextOrder = $("#optionsList li").length + 1;

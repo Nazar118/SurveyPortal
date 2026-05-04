@@ -3,23 +3,92 @@
     Layout = "~/Views/Shared/_UserLayout.cshtml";
 }
 
-<div class="row justify-content-center mb-5">
-    <div class="col-lg-8">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-primary font-weight-bold m-0" id="surveyTitle">Anket Yükleniyor...</h2>
-            <a href="/Home/Index" class="btn btn-sm btn-outline-secondary"><i class="mdi mdi-arrow-left"></i> Geri Dön</a>
-        </div>
+<style>
+    .step-container {
+        display: none;
+        animation: fadeIn 0.5s ease-in-out;
+    }
 
-        <div id="questionsContainer">
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-3 text-muted">Sorular hazırlanıyor...</p>
+        .step-container.active {
+            display: block;
+        }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .option-label {
+        display: block;
+        padding: 15px 20px;
+        border: 2px solid #ebedf2;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: white;
+    }
+
+        .option-label:hover {
+            border-color: #b66dff;
+            background: #fcf9ff;
+        }
+
+    .form-check-input:checked + .option-label {
+        border-color: #b66dff;
+        background: #f4eaff;
+        font-weight: bold;
+    }
+
+    .form-check-input {
+        display: none; 
+    }
+</style>
+
+<div class="row justify-content-center mb-5 mt-4">
+    <div class="col-lg-8">
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="text-primary font-weight-bold m-0" id="surveyTitle">Anket Yükleniyor...</h3>
+                    <a href="/Home/Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
+                        <i class="mdi mdi-close"></i> Çıkış
+                    </a>
+                </div>
+                <p class="text-muted mb-4" id="surveyDesc"></p>
+
+                <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.85rem;">
+                    <span id="progressText">Soru 0 / 0</span>
+                    <span id="progressPercent">%0 Tamamlandı</span>
+                </div>
+                <div class="progress" style="height: 10px; border-radius: 5px;">
+                    <div class="progress-bar bg-gradient-success" id="surveyProgress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
             </div>
         </div>
 
-        <div class="text-end mt-4 d-none" id="submitArea">
-            <button class="btn btn-gradient-primary btn-lg font-weight-bold px-5" id="btnSubmitSurvey">
-                <i class="mdi mdi-send"></i> Yanıtlarımı Gönder
+        <div id="questionsContainer" class="position-relative">
+            <div class="text-center py-5 bg-white shadow-sm rounded">
+                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
+                <p class="mt-3 text-muted font-weight-bold">Sorular hazırlanıyor...</p>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4 d-none" id="navigationArea">
+            <button class="btn btn-secondary btn-lg px-4" id="btnPrev" style="visibility: hidden;">
+                <i class="mdi mdi-arrow-left"></i> Geri
+            </button>
+            <button class="btn btn-gradient-primary btn-lg px-5 font-weight-bold shadow" id="btnNext">
+                İleri <i class="mdi mdi-arrow-right"></i>
+            </button>
+            <button class="btn btn-gradient-success btn-lg px-5 font-weight-bold shadow d-none" id="btnSubmitSurvey">
+                <i class="mdi mdi-send"></i> Yanıtları Gönder
             </button>
         </div>
     </div>
@@ -30,155 +99,238 @@
 @section Scripts {
     <script>
         var currentSurveyId = $("#hiddenSurveyId").val();
+        var totalQuestions = 0;
+        var currentStep = 1;
+        var allQuestionsData = [];
 
         $(document).ready(function () {
-            loadSurveyQuestions();
+            var token = localStorage.getItem("token");
+            if (!token) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Giriş Gerekli',
+                    text: 'Anketleri çözebilmek için lütfen önce giriş yapın.',
+                    confirmButtonColor: '#b66dff',
+                    confirmButtonText: 'Giriş Yap'
+                }).then(() => {
+                    window.location.href = "/Auth/Login";
+                });
+                return; 
+            }
+
+            loadSurveyDetail();
+
+        });
+
+        $(document).ready(function () {
+            loadSurveyDetail();
+
+            $("#btnNext").click(function () {
+                if (validateCurrentStep()) {
+                    currentStep++;
+                    showStep(currentStep);
+                }
+            });
+
+            $("#btnPrev").click(function () {
+                if (currentStep > 1) {
+                    currentStep--;
+                    showStep(currentStep);
+                }
+            });
 
             $("#btnSubmitSurvey").click(function () {
-                var answers = [];
-                var isValid = true;
-
-                $(".question-body").each(function () {
-                    var qBody = $(this);
-                    var qId = qBody.attr("id").replace("q-body-", "");
-                    var qType = qBody.data("type");
-                    var isRequired = qBody.data("required");
-
-                    // Metin Sorusu
-                    if (qType === 0) {
-                        var textVal = qBody.find("textarea").val().trim();
-                        if (isRequired && textVal === "") isValid = false;
-                        if (textVal !== "") {
-                            answers.push({ questionId: parseInt(qId), textAnswer: textVal, optionId: null });
-                        }
-                    }
-                    // Seçmeli Soru
-                    else {
-                        var checkedInputs = qBody.find("input:checked");
-                        if (isRequired && checkedInputs.length === 0) isValid = false;
-
-                        checkedInputs.each(function () {
-                            answers.push({
-                                questionId: parseInt(qId),
-                                optionId: parseInt($(this).val()),
-                                textAnswer: null
-                            });
-                        });
-                    }
-                });
-
-                if (!isValid) {
-                    Swal.fire('Eksik Yanıt!', 'Lütfen yıldızlı (*) tüm zorunlu soruları yanıtlayın.', 'warning');
-                    return;
+                if (validateCurrentStep()) {
+                    submitSurveyAnswers();
                 }
-
-                // DÜZELTİLMİŞ AJAX GÖNDERME KODUMUZ BURADA! (C# kodları yerine bu olmalıydı)
-                $.ajax({
-                    url: "https://localhost:7283/api/answer/submit/" + currentSurveyId,
-                    type: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify(answers),
-                    success: function (res) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Teşekkürler!',
-                            text: res.message || 'Anket yanıtlarınız başarıyla kaydedildi.',
-                            confirmButtonText: 'Ana Sayfaya Dön'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                window.location.href = '/Home/Index';
-                            }
-                        });
-                    },
-                    error: function (xhr) {
-                        console.error("Yanıt gönderme hatası:", xhr);
-                        var errorMsg = 'Yanıtlar gönderilirken bir sorun oluştu.';
-                        if (xhr.responseJSON && xhr.responseJSON.message) {
-                            errorMsg = xhr.responseJSON.message;
-                        } else if (xhr.responseText) {
-                            errorMsg = xhr.responseText;
-                        }
-                        Swal.fire('Hata!', errorMsg, 'error');
-                    }
-                });
             });
         });
 
-        function loadSurveyQuestions() {
+        function loadSurveyDetail() {
+            var token = localStorage.getItem("token");
+
             $.ajax({
-                url: "https://localhost:7283/api/question/survey/" + currentSurveyId,
+                url: "https://localhost:7283/api/survey/" + currentSurveyId + "/detail",
                 type: "GET",
-                success: function (questions) {
+                headers: { "Authorization": "Bearer " + token },
+                success: function (surveyData) {
+                    $("#surveyTitle").text(surveyData.title);
+                    $("#surveyDesc").text(surveyData.description || "");
+
+                    allQuestionsData = surveyData.questions;
+                    totalQuestions = allQuestionsData.length;
+
                     var container = $("#questionsContainer");
                     container.empty();
 
-                    if (questions.length === 0) {
-                        container.html('<div class="alert alert-warning text-center">Bu ankette henüz soru bulunmuyor.</div>');
+                    if (totalQuestions === 0) {
+                        container.html('<div class="alert alert-warning text-center shadow-sm">Bu ankette henüz soru bulunmuyor.</div>');
                         return;
                     }
 
-                    $("#submitArea").removeClass("d-none");
-                    $("#surveyTitle").text("Anketi Çöz");
+                    $("#navigationArea").removeClass("d-none");
 
-                    questions.sort((a, b) => a.orderNumber - b.orderNumber);
-
-                    $.each(questions, function (index, q) {
-                        var isRequiredHtml = q.isRequired ? '<span class="text-danger ms-1">*</span>' : '';
+                    $.each(allQuestionsData, function (index, q) {
+                        var stepNumber = index + 1;
+                        var isRequiredHtml = q.isRequired ? '<span class="text-danger ms-1" title="Zorunlu Soru">*</span>' : '';
 
                         var questionCard = `
-                            <div class="card shadow-sm mb-4 border-0">
-                                <div class="card-body p-4">
-                                    <h5 class="font-weight-bold mb-3">${index + 1}. ${q.questionText} ${isRequiredHtml}</h5>
-                                    <div class="question-body" id="q-body-${q.id}" data-type="${q.questionType}" data-required="${q.isRequired}">
+                            <div class="card shadow-sm border-0 step-container" id="step-${stepNumber}" data-qid="${q.id}" data-type="${q.questionType}" data-required="${q.isRequired}">
+                                <div class="card-body p-5">
+                                    <h4 class="font-weight-bold mb-4" style="line-height: 1.5;">${stepNumber}. ${q.questionText} ${isRequiredHtml}</h4>
+                                    <div class="question-body">
+                                        <!-- Şıklar buraya gelecek -->
                                     </div>
                                 </div>
                             </div>
                         `;
                         container.append(questionCard);
 
-                        var qBody = $("#q-body-" + q.id);
+                        var qBody = $(`#step-${stepNumber} .question-body`);
 
                         if (q.questionType === 0) {
-                            qBody.html(`<textarea class="form-control" rows="3" placeholder="Yanıtınızı buraya yazın..."></textarea>`);
+                            qBody.html(`<textarea class="form-control form-control-lg bg-light" rows="4" placeholder="Yanıtınızı buraya yazın..."></textarea>`);
                         }
                         else {
-                            qBody.html('<small class="text-muted spinner-text"><i class="mdi mdi-loading mdi-spin"></i> Şıklar yükleniyor...</small>');
+                            if (!q.options || q.options.length === 0) {
+                                qBody.html('<small class="text-danger"><i class="mdi mdi-alert"></i> Bu soru için şık girilmemiş!</small>');
+                            } else {
+                                var inputType = q.questionType === 1 ? "radio" : "checkbox";
+                                var inputName = q.questionType === 1 ? `q_${q.id}` : `q_${q.id}[]`;
 
-                            $.ajax({
-                                url: "https://localhost:7283/api/option/question/" + q.id,
-                                type: "GET",
-                                success: function (options) {
-                                    qBody.empty();
-
-                                    if(options.length === 0) {
-                                        qBody.html('<small class="text-danger">Bu soru için şık girilmemiş!</small>');
-                                        return;
-                                    }
-
-                                    options.sort((a, b) => a.orderNumber - b.orderNumber);
-
-                                    $.each(options, function(oIndex, opt) {
-                                        var inputType = q.questionType === 1 ? "radio" : "checkbox";
-                                        var inputName = q.questionType === 1 ? `question_${q.id}` : `question_${q.id}_opt_${opt.id}`;
-
-                                        var inputId = `opt_${opt.id}`;
-                                        var optionHtml = `
-                                            <div class="form-check form-check-primary mb-2">
-                                                <input type="${inputType}" class="form-check-input option-input" name="${inputName}" id="${inputId}" value="${opt.id}">
-                                                <label class="form-check-label" for="${inputId}" style="cursor:pointer; margin-left: 5px;">
-                                                    ${opt.optionText}
-                                                </label>
-                                            </div>
-                                        `;
-                                        qBody.append(optionHtml);
-                                    });
-                                }
-                            });
+                                $.each(q.options, function(oIndex, opt) {
+                                    var inputId = `opt_${opt.id}`;
+                                    var optionHtml = `
+                                        <div class="form-check mb-3 p-0">
+                                            <input class="form-check-input" type="${inputType}" name="${inputName}" id="${inputId}" value="${opt.id}">
+                                            <label class="option-label" for="${inputId}">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="me-3 fs-5">
+                                                        <i class="mdi ${inputType === 'radio' ? 'mdi-radiobox-blank' : 'mdi-checkbox-blank-outline'} uncheck-icon text-muted"></i>
+                                                    </div>
+                                                    <span style="font-size: 1.05rem;">${opt.optionText}</span>
+                                                </div>
+                                            </label>
+                                        </div>
+                                    `;
+                                    qBody.append(optionHtml);
+                                });
+                            }
                         }
                     });
+
+                    // Tıklanan Radio/Checkbox ikonunu değiştirme (UX)
+                    $(".form-check-input[type='radio']").change(function() {
+                        var name = $(this).attr('name');
+                        $(`input[name='${name}']`).siblings('.option-label').find('.uncheck-icon').removeClass('mdi-radiobox-marked text-primary').addClass('mdi-radiobox-blank text-muted');
+                        $(this).siblings('.option-label').find('.uncheck-icon').removeClass('mdi-radiobox-blank text-muted').addClass('mdi-radiobox-marked text-primary');
+                    });
+
+                    $(".form-check-input[type='checkbox']").change(function() {
+                        var icon = $(this).siblings('.option-label').find('.uncheck-icon');
+                        if(this.checked) icon.removeClass('mdi-checkbox-blank-outline text-muted').addClass('mdi-checkbox-marked text-primary');
+                        else icon.removeClass('mdi-checkbox-marked text-primary').addClass('mdi-checkbox-blank-outline text-muted');
+                    });
+
+                    // İlk adımı göster
+                    showStep(1);
                 },
                 error: function (xhr) {
-                    $("#questionsContainer").html('<div class="alert alert-danger text-center">Sorular yüklenirken bir hata oluştu!</div>');
+                    $("#questionsContainer").html('<div class="alert alert-danger text-center shadow-sm">Sorular yüklenirken bir hata oluştu!</div>');
+                }
+            });
+        }
+
+        function showStep(stepNum) {
+            $(".step-container").removeClass("active");
+            $(`#step-${stepNum}`).addClass("active");
+
+            $("#btnPrev").css("visibility", stepNum === 1 ? "hidden" : "visible");
+
+            if (stepNum === totalQuestions) {
+                $("#btnNext").addClass("d-none");
+                $("#btnSubmitSurvey").removeClass("d-none");
+            } else {
+                $("#btnNext").removeClass("d-none");
+                $("#btnSubmitSurvey").addClass("d-none");
+            }
+
+            var percent = Math.round(((stepNum - 1) / totalQuestions) * 100);
+            if (stepNum === totalQuestions) percent = 100; // Son soruda %100 dolsun
+
+            $("#progressText").text(`Soru ${stepNum} / ${totalQuestions}`);
+            $("#progressPercent").text(`%${percent} Tamamlandı`);
+            $("#surveyProgress").css("width", percent + "%").attr("aria-valuenow", percent);
+        }
+
+        function validateCurrentStep() {
+            var currentCard = $(`#step-${currentStep}`);
+            var isRequired = currentCard.data("required");
+            var qType = currentCard.data("type");
+            var isValid = true;
+
+            if (isRequired) {
+                if (qType === 0) { // Metin
+                    var textVal = currentCard.find("textarea").val().trim();
+                    if (textVal === "") isValid = false;
+                } else { // Seçmeli
+                    if (currentCard.find("input:checked").length === 0) isValid = false;
+                }
+            }
+
+            if (!isValid) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Boş Geçilemez!',
+                    text: 'Lütfen bu soruyu yanıtlamadan ilerlemeyin.',
+                    confirmButtonColor: '#b66dff'
+                });
+            }
+            return isValid;
+        }
+
+        function submitSurveyAnswers() {
+            var answers = [];
+
+            $(".step-container").each(function () {
+                var step = $(this);
+                var qId = parseInt(step.data("qid"));
+                var qType = step.data("type");
+
+                if (qType === 0) { // Metin
+                    var textVal = step.find("textarea").val().trim();
+                    if (textVal !== "") {
+                        answers.push({ questionId: qId, textAnswer: textVal, optionId: null });
+                    }
+                } else { // Seçmeli
+                    step.find("input:checked").each(function () {
+                        answers.push({
+                            questionId: qId,
+                            optionId: parseInt($(this).val()),
+                            textAnswer: null
+                        });
+                    });
+                }
+            });
+
+            var btn = $("#btnSubmitSurvey");
+            btn.prop("disabled", true).html('<i class="mdi mdi-loading mdi-spin"></i> Gönderiliyor...');
+
+            var token = localStorage.getItem("token");
+
+            $.ajax({
+                url: "https://localhost:7283/api/answer/submit/" + currentSurveyId,
+                type: "POST",
+                contentType: "application/json",
+                headers: { "Authorization": "Bearer " + token },
+                data: JSON.stringify(answers),
+                success: function (res) {
+                    window.location.href = '/Home/ThankYou';
+                },
+                error: function (xhr) {
+                    btn.prop("disabled", false).html('<i class="mdi mdi-send"></i> Yanıtları Gönder');
+                    var errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Yanıtlar gönderilirken bir sorun oluştu.';
+                    Swal.fire('Hata!', errorMsg, 'error');
                 }
             });
         }
