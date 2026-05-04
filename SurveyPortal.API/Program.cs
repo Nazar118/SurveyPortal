@@ -1,15 +1,16 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using SurveyPortal.API.Models;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics; 
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using SurveyPortal.API.Data;
+using SurveyPortal.API.Models;
 using SurveyPortal.API.Repositories.Concrete;
 using SurveyPortal.API.Repositories.Interfaces;
-using Microsoft.OpenApi.Models;
-using Microsoft.AspNetCore.Diagnostics; // 🔥 YENİ: Hata yakalama (Exception Handling) için gerekli kütüphane
+using System.Text;
+using SurveyPortal.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddCors(options =>
@@ -33,6 +34,7 @@ builder.Services.AddScoped<SurveyPortal.API.Services.IQuestionService, SurveyPor
 builder.Services.AddScoped<SurveyPortal.API.Services.IAnswerService, SurveyPortal.API.Services.AnswerService>();
 builder.Services.AddScoped<SurveyPortal.API.Services.IOptionService, SurveyPortal.API.Services.OptionService>();
 builder.Services.AddScoped<SurveyPortal.API.Services.IResultService, SurveyPortal.API.Services.ResultService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<SurveyPortal.API.Helpers.JwtTokenGenerator>();
 
 builder.Services.AddAutoMapper(config =>

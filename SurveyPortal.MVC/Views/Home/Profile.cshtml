@@ -4,7 +4,7 @@
 }
 
 <style>
-    /* 🔥 PORTAL (DASHBOARD) TASARIMI İÇİN ÖZEL CSS */
+    /* 🔥 PORTAL CSS (Mevcut tasarım aynen korundu) */
     .portal-sidebar {
         background: #fff;
         border-radius: 12px;
@@ -26,7 +26,6 @@
         box-shadow: 0 4px 10px rgba(182, 109, 255, 0.3);
     }
 
-    /* Sol Menü Butonları */
     .nav-pills .nav-link {
         color: #444;
         border-radius: 10px;
@@ -65,7 +64,6 @@
                 color: white;
             }
 
-    /* Sağ İçerik Alanı */
     .portal-content {
         background: #fff;
         border-radius: 12px;
@@ -74,7 +72,6 @@
         min-height: 70vh;
     }
 
-    /* Anket Listesi Hover Efekti */
     .survey-list-item {
         transition: all 0.2s ease;
         border-left: 4px solid transparent;
@@ -84,50 +81,46 @@
             background-color: #fcfcfc;
             border-left-color: #b66dff;
         }
+
+    /* Yeni Form Input Tasarımı */
+    .form-control:focus {
+        border-color: #b66dff;
+        box-shadow: 0 0 0 0.2rem rgba(182, 109, 255, 0.25);
+    }
 </style>
 
 <div class="container-fluid mt-4 mb-5" style="max-width: 1400px;">
     <div class="row g-4">
 
-        <!-- 🔥 SOL MENÜ (SIDEBAR PORTAL ALANI) -->
+        <!-- 🔥 SOL MENÜ -->
         <div class="col-lg-3 col-md-4">
             <div class="portal-sidebar p-4">
-
-                <!-- Profil Özeti -->
                 <div class="text-center mb-4 pb-4 border-bottom">
-                    <div class="portal-avatar mb-3">
-                        <i class="mdi mdi-account"></i>
-                    </div>
+                    <div class="portal-avatar mb-3"><i class="mdi mdi-account"></i></div>
                     <h5 class="font-weight-bold text-dark mb-1" id="sideUsername">Yükleniyor...</h5>
                     <span class="badge badge-outline-primary badge-pill px-3 py-1" id="sideRole">...</span>
                 </div>
 
-                <!-- Menü (Nav Pills) -->
                 <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-
                     <button class="nav-link active" id="v-pills-surveys-tab" data-bs-toggle="pill" data-bs-target="#v-pills-surveys" type="button" role="tab">
                         <i class="mdi mdi-format-list-checks"></i> Katıldığım Anketler
                     </button>
-
                     <button class="nav-link" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab">
                         <i class="mdi mdi-card-account-details-outline"></i> Hesap Bilgilerim
                     </button>
-
-                    <hr class="my-3">
-
-                    <a href="/Home/Index" class="nav-link text-dark" style="background: transparent;">
-                        <i class="mdi mdi-compass-outline"></i> Yeni Anket Keşfet
-                    </a>
-
-                    <button class="nav-link text-danger mt-2" onclick="logout()" style="background: transparent;">
-                        <i class="mdi mdi-logout text-danger"></i> Güvenli Çıkış
+                    <!-- 🔥 YENİ: Şifre Değiştir Sekmesi -->
+                    <button class="nav-link" id="v-pills-password-tab" data-bs-toggle="pill" data-bs-target="#v-pills-password" type="button" role="tab">
+                        <i class="mdi mdi-lock-reset"></i> Şifre Değiştir
                     </button>
 
+                    <hr class="my-3">
+                    <a href="/Home/Index" class="nav-link text-dark" style="background: transparent;"><i class="mdi mdi-compass-outline"></i> Yeni Anket Keşfet</a>
+                    <button class="nav-link text-danger mt-2" onclick="logout()" style="background: transparent;"><i class="mdi mdi-logout text-danger"></i> Güvenli Çıkış</button>
                 </div>
             </div>
         </div>
 
-        <!-- 🔥 SAĞ İÇERİK ALANI (DINAMIK DEĞİŞEN ALAN) -->
+        <!-- 🔥 SAĞ İÇERİK ALANI -->
         <div class="col-lg-9 col-md-8">
             <div class="portal-content">
                 <div class="tab-content" id="v-pills-tabContent">
@@ -137,35 +130,65 @@
                         <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
                             <h3 class="font-weight-bold m-0"><i class="mdi mdi-check-network text-success me-2"></i> Anket Geçmişim</h3>
                         </div>
-
                         <div id="mySurveysList">
-                            <div class="text-center py-5">
-                                <div class="spinner-border text-primary" role="status"></div>
-                                <p class="mt-3 text-muted font-weight-bold">Verileriniz getiriliyor...</p>
-                            </div>
+                            <div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div><p class="mt-3 text-muted font-weight-bold">Verileriniz getiriliyor...</p></div>
                         </div>
                     </div>
 
-                    <!-- TAB 2: HESAP BİLGİLERİM -->
+                    <!-- TAB 2: HESAP BİLGİLERİM (Artık Güncellenebilir Form) -->
                     <div class="tab-pane fade" id="v-pills-profile" role="tabpanel">
                         <h3 class="font-weight-bold mb-4 pb-2 border-bottom"><i class="mdi mdi-shield-account-outline text-primary me-2"></i> Hesap Detayları</h3>
 
+                        <form id="profileUpdateForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-4">
+                                    <label class="text-muted font-weight-bold mb-2">Kullanıcı Adı</label>
+                                    <input type="text" class="form-control form-control-lg bg-light border-1" id="detailUsername" required>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <label class="text-muted font-weight-bold mb-2">E-Posta Adresi</label>
+                                    <input type="email" class="form-control form-control-lg bg-light border-1" id="detailEmail" required>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <label class="text-muted font-weight-bold mb-2">Yetki Seviyesi</label>
+                                    <div class="form-control form-control-lg bg-light border-0 text-primary font-weight-bold" id="detailRole">...</div>
+                                </div>
+                                <div class="col-md-6 mb-4">
+                                    <label class="text-muted font-weight-bold mb-2">Hesap Durumu</label>
+                                    <div class="form-control form-control-lg bg-light border-0 text-success font-weight-bold"><i class="mdi mdi-check-circle"></i> Aktif</div>
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="button" id="btnUpdateProfile" class="btn btn-gradient-primary px-5 py-3 rounded-pill font-weight-bold shadow-sm">
+                                    <i class="mdi mdi-content-save me-1"></i> Bilgilerimi Güncelle
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- 🔥 YENİ TAB 3: ŞİFRE DEĞİŞTİR -->
+                    <div class="tab-pane fade" id="v-pills-password" role="tabpanel">
+                        <h3 class="font-weight-bold mb-4 pb-2 border-bottom"><i class="mdi mdi-lock-reset text-danger me-2"></i> Şifre Değiştir</h3>
+
                         <div class="row">
-                            <div class="col-md-6 mb-4">
-                                <label class="text-muted font-weight-bold mb-2">Kullanıcı Adı</label>
-                                <div class="form-control form-control-lg bg-light border-0" id="detailUsername">...</div>
-                            </div>
-                            <div class="col-md-6 mb-4">
-                                <label class="text-muted font-weight-bold mb-2">E-Posta Adresi</label>
-                                <div class="form-control form-control-lg bg-light border-0" id="detailEmail">...</div>
-                            </div>
-                            <div class="col-md-6 mb-4">
-                                <label class="text-muted font-weight-bold mb-2">Yetki Seviyesi</label>
-                                <div class="form-control form-control-lg bg-light border-0 text-primary font-weight-bold" id="detailRole">...</div>
-                            </div>
-                            <div class="col-md-6 mb-4">
-                                <label class="text-muted font-weight-bold mb-2">Hesap Durumu</label>
-                                <div class="form-control form-control-lg bg-light border-0 text-success font-weight-bold"><i class="mdi mdi-check-circle"></i> Aktif</div>
+                            <div class="col-md-8">
+                                <form id="passwordChangeForm">
+                                    <div class="form-group mb-4">
+                                        <label class="text-muted font-weight-bold mb-2">Mevcut Şifreniz</label>
+                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="currentPassword" placeholder="Şu anki şifrenizi girin..." required>
+                                    </div>
+                                    <div class="form-group mb-4">
+                                        <label class="text-muted font-weight-bold mb-2">Yeni Şifre</label>
+                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="newPassword" placeholder="Yeni şifrenizi belirleyin..." required>
+                                    </div>
+                                    <div class="form-group mb-4">
+                                        <label class="text-muted font-weight-bold mb-2">Yeni Şifre (Tekrar)</label>
+                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="newPasswordConfirm" placeholder="Yeni şifrenizi tekrar girin..." required>
+                                    </div>
+                                    <button type="button" id="btnChangePassword" class="btn btn-outline-danger px-5 py-3 rounded-pill font-weight-bold shadow-sm">
+                                        <i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle
+                                    </button>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -180,29 +203,94 @@
 @section Scripts {
     <script>
         $(document).ready(function () {
-            // Sayfa açılır açılmaz profili yükle
             loadUserProfile();
 
-            // 🔥 TAB GEÇİŞLERİNİ GARANTİYE ALAN KOD (Bootstrap 4 & 5 Uyumlu)
+            // Tab Geçişlerini Sağlama
             $(".nav-pills .nav-link").click(function () {
-                // Sadece çıkış veya ana sayfa butonu değilse çalışsın
                 if($(this).attr("id")) {
                     $(".nav-pills .nav-link").removeClass("active");
                     $(this).addClass("active");
-
                     var target = $(this).attr("data-bs-target") || $(this).attr("data-target");
                     $(".tab-pane").removeClass("show active");
                     $(target).addClass("show active");
                 }
             });
+
+            // 🔥 PROFİL GÜNCELLEME İŞLEMİ
+            $("#btnUpdateProfile").click(function () {
+                var btn = $(this);
+                var token = localStorage.getItem("token");
+                var username = $("#detailUsername").val().trim();
+                var email = $("#detailEmail").val().trim();
+
+                if (!username || !email) {
+                    Swal.fire('Eksik Alan', 'Lütfen kullanıcı adı ve e-posta alanlarını doldurun.', 'warning');
+                    return;
+                }
+
+                btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Güncelleniyor...');
+
+                $.ajax({
+                    url: "https://localhost:7283/api/user/update-profile",
+                    type: "PUT",
+                    contentType: "application/json",
+                    headers: { "Authorization": "Bearer " + token },
+                    data: JSON.stringify({ userName: username, email: email }),
+                    success: function (res) {
+                        btn.prop('disabled', false).html('<i class="mdi mdi-content-save me-1"></i> Bilgilerimi Güncelle');
+                        $("#sideUsername").text(username); // Sol paneli de hemen güncelle
+                        Swal.fire('Harika!', 'Profil bilgileriniz başarıyla güncellendi.', 'success');
+                    },
+                    error: function (xhr) {
+                        btn.prop('disabled', false).html('<i class="mdi mdi-content-save me-1"></i> Bilgilerimi Güncelle');
+                        Swal.fire('Hata!', xhr.responseText || 'Güncelleme sırasında bir hata oluştu.', 'error');
+                    }
+                });
+            });
+
+            // 🔥 ŞİFRE DEĞİŞTİRME İŞLEMİ
+            $("#btnChangePassword").click(function () {
+                var btn = $(this);
+                var token = localStorage.getItem("token");
+                var currentPass = $("#currentPassword").val();
+                var newPass = $("#newPassword").val();
+                var newPassConfirm = $("#newPasswordConfirm").val();
+
+                if (!currentPass || !newPass || !newPassConfirm) {
+                    Swal.fire('Eksik Alan', 'Lütfen tüm şifre alanlarını doldurun.', 'warning');
+                    return;
+                }
+
+                if (newPass !== newPassConfirm) {
+                    Swal.fire('Uyumsuzluk', 'Yeni şifre ile tekrarı birbiriyle eşleşmiyor!', 'warning');
+                    return;
+                }
+
+                btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> İşleniyor...');
+
+                $.ajax({
+                    url: "https://localhost:7283/api/user/change-password",
+                    type: "PUT",
+                    contentType: "application/json",
+                    headers: { "Authorization": "Bearer " + token },
+                    data: JSON.stringify({ currentPassword: currentPass, newPassword: newPass }),
+                    success: function (res) {
+                        btn.prop('disabled', false).html('<i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle');
+                        $("#currentPassword, #newPassword, #newPasswordConfirm").val(''); // Formu temizle
+                        Swal.fire('Başarılı!', 'Şifreniz güvenli bir şekilde değiştirildi.', 'success');
+                    },
+                    error: function (xhr) {
+                        btn.prop('disabled', false).html('<i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle');
+                        Swal.fire('Hata!', xhr.responseText || 'Şifreniz değiştirilemedi.', 'error');
+                    }
+                });
+            });
         });
 
+        // Verileri Getirme İşlemi
         function loadUserProfile() {
             var token = localStorage.getItem("token");
-            if (!token) {
-                window.location.href = "/Auth/Login";
-                return;
-            }
+            if (!token) { window.location.href = "/Auth/Login"; return; }
 
             $.ajax({
                 url: "https://localhost:7283/api/user/me",
@@ -212,8 +300,9 @@
                     $("#sideUsername").text(data.username);
                     $("#sideRole").text(data.role);
 
-                    $("#detailUsername").text(data.username);
-                    $("#detailEmail").text(data.email);
+                    // Form inputlarına değerleri (val) basıyoruz
+                    $("#detailUsername").val(data.username);
+                    $("#detailEmail").val(data.email);
                     $("#detailRole").text(data.role);
 
                     var listContainer = $("#mySurveysList");
@@ -224,7 +313,6 @@
                             <div class="text-center py-5">
                                 <i class="mdi mdi-text-box-search-outline text-muted" style="font-size: 5rem;"></i>
                                 <h4 class="mt-3 text-muted">Burası biraz ıssız...</h4>
-                                <p class="text-muted">Henüz hiçbir ankete katılmadınız. Fikirlerinizi paylaşmaya hemen başlayın!</p>
                                 <a href="/Home/Index" class="btn btn-gradient-primary mt-2 px-4 rounded-pill">Anketleri Keşfet</a>
                             </div>
                         `);
@@ -232,42 +320,24 @@
                     }
 
                     $.each(data.participatedSurveys, function (index, survey) {
-                        var date = new Date(survey.completedDate).toLocaleDateString("tr-TR", {
-                            year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit'
-                        });
-
+                        var date = new Date(survey.completedDate).toLocaleDateString("tr-TR", { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' });
                         var item = `
                             <div class="survey-list-item d-flex justify-content-between align-items-center py-4 px-3 border-bottom rounded">
-                                <div>
-                                    <h5 class="font-weight-bold mb-1 text-dark">${survey.surveyTitle}</h5>
-                                    <span class="text-muted" style="font-size: 0.9rem;"><i class="mdi mdi-calendar-check text-success me-1"></i> Katılım Tarihi: ${date}</span>
-                                </div>
-                                <div>
-                                    <a href="/Home/UserResult/${survey.surveyId}" class="btn btn-outline-primary rounded-pill px-4 shadow-sm font-weight-bold">
-                                        Sonuçları Gör <i class="mdi mdi-arrow-right ms-1"></i>
-                                    </a>
-                                </div>
+                                <div><h5 class="font-weight-bold mb-1 text-dark">${survey.surveyTitle}</h5><span class="text-muted" style="font-size: 0.9rem;"><i class="mdi mdi-calendar-check text-success me-1"></i> Katılım Tarihi: ${date}</span></div>
+                                <div><a href="/Home/UserResult/${survey.surveyId}" class="btn btn-outline-primary rounded-pill px-4 shadow-sm font-weight-bold">Sonuçları Gör <i class="mdi mdi-arrow-right ms-1"></i></a></div>
                             </div>
                         `;
                         listContainer.append(item);
                     });
                 },
-                error: function (xhr) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Oturum Hatası',
-                        text: 'Profil bilgilerinizi çekerken bir sorun oluştu. Lütfen tekrar giriş yapın.'
-                    }).then(() => {
-                        logout();
-                    });
-                }
+                error: function () { logout(); }
             });
         }
 
         function logout() {
             localStorage.removeItem("token");
             localStorage.removeItem("userRole");
-            window.location.href = "/Auth/Login";
+            window.location.href = "/Home/Index";
         }
     </script>
 }

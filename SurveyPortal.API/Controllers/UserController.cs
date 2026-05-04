@@ -2,7 +2,8 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SurveyPortal.API.Data; 
+using SurveyPortal.API.Data;
+using SurveyPortal.API.DTOs; // 🔥 DTO'ları kullanabilmek için bunu ekledik
 using SurveyPortal.API.Models;
 using System.Security.Claims;
 
@@ -10,7 +11,7 @@ namespace SurveyPortal.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] 
+    [Authorize]
     public class UserController : ControllerBase
     {
         private readonly UserManager<AppUser> _userManager;
@@ -51,8 +52,47 @@ namespace SurveyPortal.API.Controllers
             });
         }
 
+        // 🔥 YENİ EKLENEN: PROFİL BİLGİLERİNİ GÜNCELLE
+        [HttpPut("update-profile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound("Kullanıcı bulunamadı.");
 
-        [Authorize(Roles = "Admin")] 
+            // Email değişiyorsa, başka biri kullanıyor mu kontrol et
+            if (user.Email != model.Email)
+            {
+                var emailExists = await _userManager.FindByEmailAsync(model.Email);
+                if (emailExists != null) return BadRequest("Bu e-posta adresi zaten kullanımda.");
+            }
+
+            user.UserName = model.UserName;
+            user.Email = model.Email;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (result.Succeeded) return Ok(new { Message = "Profil bilgileriniz başarıyla güncellendi." });
+
+            return BadRequest("Güncelleme başarısız oldu.");
+        }
+
+        // 🔥 YENİ EKLENEN: PROFİL İÇİNDEN ŞİFRE DEĞİŞTİR
+        [HttpPut("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null) return NotFound("Kullanıcı bulunamadı.");
+
+            var result = await _userManager.ChangePasswordAsync(user, model.CurrentPassword, model.NewPassword);
+            if (result.Succeeded) return Ok(new { Message = "Şifreniz başarıyla değiştirildi." });
+
+            return BadRequest("Mevcut şifreniz yanlış veya yeni şifre kurallara uymuyor.");
+        }
+
+        // --- ADMİN METODLARI (Senin yazdıkların aynen duruyor) ---
+
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetUsers()
         {
@@ -77,7 +117,7 @@ namespace SurveyPortal.API.Controllers
             return Ok(result);
         }
 
-        [Authorize(Roles = "Admin")] // Admin kilidini buraya taşıdık
+        [Authorize(Roles = "Admin")]
         [HttpPut("toggle-status/{id}")]
         public async Task<IActionResult> ToggleStatus(string id)
         {

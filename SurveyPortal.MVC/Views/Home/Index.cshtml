@@ -67,9 +67,6 @@
                 <h2 class="font-weight-bold text-dark mb-2">Anketleri Keşfet</h2>
                 <p class="text-muted">Fikriniz bizim için çok değerli. Kategoriye göre arayın ve katılın.</p>
             </div>
-            <a href="/Home/Profile" class="btn btn-outline-primary rounded-pill px-4 shadow-sm d-none" id="btnGoProfile">
-                <i class="mdi mdi-account-circle me-1"></i> Profilim
-            </a>
         </div>
         <div class="col-md-6">
             <div class="row g-2">
@@ -104,10 +101,6 @@
         $(document).ready(function () {
             loadCategories();
             loadActiveSurveys();
-
-            if (localStorage.getItem("token")) {
-                $("#btnGoProfile").removeClass("d-none");
-            }
 
             $("#searchInput").on("keyup", debounce(function() { loadActiveSurveys(); }, 500));
             $("#categoryFilter, #sortFilter").change(function() { loadActiveSurveys(); });
@@ -159,12 +152,10 @@
             var catId = $("#categoryFilter").val();
             var search = $("#searchInput").val();
             var sort = $("#sortFilter").val();
-            var token = localStorage.getItem("token");
 
             $.ajax({
                 url: `https://localhost:7283/api/survey/active?categoryId=${catId}&search=${search}&sortBy=${sort}`,
                 type: "GET",
-                headers: { "Authorization": "Bearer " + token },
                 success: function (data) {
                     container.empty();
 

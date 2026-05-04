@@ -1,5 +1,5 @@
 ﻿using AutoMapper;
-using Microsoft.AspNetCore.Authorization; 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SurveyPortal.API.DTOs;
 using SurveyPortal.API.Models;
@@ -22,7 +22,6 @@ namespace SurveyPortal.API.Controllers
             _unitOfWork = unitOfWork;
         }
 
-        [Authorize]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -39,6 +38,7 @@ namespace SurveyPortal.API.Controllers
             await _unitOfWork.CommitAsync();
             return Ok("Kategori başarıyla eklendi.");
         }
+
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, CategoryDto categoryDto)

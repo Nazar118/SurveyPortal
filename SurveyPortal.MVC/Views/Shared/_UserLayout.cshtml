@@ -8,9 +8,23 @@
     <link rel="stylesheet" href="~/assets/vendors/css/vendor.bundle.base.css">
     <link rel="stylesheet" href="~/assets/css/style.css">
     <style>
-        body { background-color: #f4f7fa; }
-        .navbar.user-navbar { background: linear-gradient(to right, #b66dff, #4facfe); }
-        .navbar.user-navbar .navbar-brand, .navbar.user-navbar .nav-link { color: white !important; font-weight: bold; }
+        body {
+            background-color: #f4f7fa;
+        }
+
+        .navbar.user-navbar {
+            background: linear-gradient(to right, #b66dff, #4facfe);
+        }
+
+            .navbar.user-navbar .navbar-brand, .navbar.user-navbar .nav-link {
+                color: white !important;
+                font-weight: bold;
+                transition: opacity 0.2s;
+            }
+
+                .navbar.user-navbar .nav-link:hover {
+                    opacity: 0.8;
+                }
     </style>
 </head>
 <body>
@@ -19,10 +33,7 @@
             <a class="navbar-brand text-white" href="/Home/Index">
                 <i class="mdi mdi-poll-box"></i> SurveyPortal
             </a>
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
-                    <a class="nav-link" href="/Auth/Login"><i class="mdi mdi-login"></i> Admin Girişi</a>
-                </li>
+            <ul class="navbar-nav ms-auto flex-row align-items-center" style="gap: 15px;" id="navAuthSection">
             </ul>
         </div>
     </nav>
@@ -43,6 +54,37 @@
     @await RenderSectionAsync("Scripts", required: false)
 
     <script>
+        $(document).ready(function () {
+            var token = localStorage.getItem("token");
+            var authSection = $("#navAuthSection");
+
+            if (token) {
+                authSection.html(`
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-sm btn-outline-light px-3 rounded-pill" href="/Home/Profile"><i class="mdi mdi-account-circle"></i> Profilim</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-warning" href="#" onclick="globalLogout()"><i class="mdi mdi-logout"></i> Çıkış</a>
+                    </li>
+                `);
+            } else {
+                authSection.html(`
+                    <li class="nav-item">
+                        <a class="nav-link" href="/Auth/Login"><i class="mdi mdi-login"></i> Giriş Yap</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-sm btn-light text-primary px-4 rounded-pill font-weight-bold" href="/Auth/Register"><i class="mdi mdi-account-plus"></i> Kayıt Ol</a>
+                    </li>
+                `);
+            }
+        });
+
+        function globalLogout() {
+            localStorage.removeItem("token");
+            localStorage.removeItem("userRole");
+            window.location.href = "/Home/Index"; 
+        }
+
         $.ajaxSetup({
             beforeSend: function (xhr) {
                 var token = localStorage.getItem("token");
@@ -55,7 +97,7 @@
                     Swal.fire({
                         icon: 'warning',
                         title: 'Oturum Gerekli!',
-                        text: 'Anketi gönderebilmek için giriş yapmalısınız.'
+                        text: 'İşleme devam edebilmek için giriş yapmalısınız.'
                     }).then(() => {
                         window.location.href = "/Auth/Login";
                     });
