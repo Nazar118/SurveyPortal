@@ -50,16 +50,23 @@
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="~/js/site.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 
     <script>
         $(document).ready(function () {
+            // 🔥 AKILLI MENÜ KONTROLÜ
             var token = localStorage.getItem("token");
             var authSection = $("#navAuthSection");
 
             if (token) {
+                // Giriş yapmış kullanıcı menüsü
                 authSection.html(`
+                    <li class="nav-item me-2">
+                        <a class="nav-link btn-dark-mode-toggle" href="#" title="Gece/Gündüz Modu" style="font-size: 1.3rem;">
+                            <i class="mdi mdi-weather-night darkModeIcon" style="color: white;"></i>
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link btn btn-sm btn-outline-light px-3 rounded-pill" href="/Home/Profile"><i class="mdi mdi-account-circle"></i> Profilim</a>
                     </li>
@@ -68,7 +75,13 @@
                     </li>
                 `);
             } else {
+                // Misafir kullanıcı menüsü (Giriş yapmamış)
                 authSection.html(`
+                    <li class="nav-item me-2">
+                        <a class="nav-link btn-dark-mode-toggle" href="#" title="Gece/Gündüz Modu" style="font-size: 1.3rem;">
+                            <i class="mdi mdi-weather-night darkModeIcon" style="color: white;"></i>
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="/Auth/Login"><i class="mdi mdi-login"></i> Giriş Yap</a>
                     </li>

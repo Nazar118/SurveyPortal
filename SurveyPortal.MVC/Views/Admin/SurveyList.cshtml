@@ -149,7 +149,6 @@
             loadCategories();
         });
 
-        // 1. KATEGORİLERİ YÜKLE
         function loadCategories() {
             $.ajax({
                 url: "https://localhost:7283/api/category",
@@ -170,7 +169,6 @@
             });
         }
 
-        // 2. ANKETLERİ YÜKLEME FONKSİYONU
         function loadSurveys() {
             $.ajax({
                 url: "https://localhost:7283/api/survey",
@@ -188,7 +186,6 @@
                         var description = survey.description ? survey.description.substring(0, 30) + (survey.description.length > 30 ? "..." : "") : "-";
                         var endDateText = survey.endDate ? new Date(survey.endDate).toLocaleDateString("tr-TR") : '<span class="text-muted fst-italic">Süresiz</span>';
 
-                        // 🔥 1.4 UI ROZET GÜNCELLEMESİ (Draft=Sarı, Active=Yeşil, Closed=Kırmızı)
                         var statusBadge = "";
                         if (survey.status === "Draft") {
                             statusBadge = '<label class="badge bg-warning text-dark">Taslak</label>';
@@ -230,7 +227,6 @@
             });
         }
 
-        // 3. ANKET SİLME
         function deleteSurvey(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
@@ -246,7 +242,7 @@
                         url: "https://localhost:7283/api/survey/" + id,
                         type: "DELETE",
                         success: function () {
-                            Swal.fire({ icon: 'success', title: 'Silindi!', timer: 1500, showConfirmButton: false });
+                            showSuccessToast('Anket başarıyla silindi.'); // 🔥 TOAST
                             loadSurveys();
                         }
                     });
@@ -254,7 +250,6 @@
             });
         }
 
-        // 4. YENİ ANKET KAYDETME
         $("#btnSaveSurvey").click(function () {
             var titleInput = $("#surveyTitle").val();
             var descriptionInput = $("#surveyDescription").val();
@@ -262,7 +257,7 @@
             var endDateInput = $("#surveyEndDate").val();
 
             if (!titleInput || !categoryIdInput) {
-                Swal.fire('Uyarı', 'Lütfen Başlık ve Kategori alanlarını doldurunuz!', 'warning');
+                showErrorToast('Lütfen Başlık ve Kategori alanlarını doldurunuz!'); // 🔥 TOAST
                 return;
             }
 
@@ -270,7 +265,7 @@
                 title: titleInput,
                 description: descriptionInput,
                 categoryId: parseInt(categoryIdInput),
-                status: "Draft", // 🔥 Yeni eklenen her anket taslaktır
+                status: "Draft",
                 endDate: endDateInput ? endDateInput : null,
                 isAnonymous: false
             };
@@ -283,13 +278,12 @@
                 success: function () {
                     $("#addSurveyModal").modal('hide');
                     $("#addSurveyForm")[0].reset();
-                    Swal.fire({ icon: 'success', title: 'Harika!', timer: 1500, showConfirmButton: false });
+                    showSuccessToast('Anket başarıyla oluşturuldu.'); // 🔥 TOAST
                     loadSurveys();
                 }
             });
         });
 
-        // Kategori Ekleme Popup'ı (Değişmedi)
         $("#btnAddNewCategory").click(function () {
             Swal.fire({
                 title: 'Yeni Kategori Ekle', input: 'text', showCancelButton: true,
@@ -301,7 +295,7 @@
                         url: "https://localhost:7283/api/category", type: "POST", contentType: "application/json",
                         data: JSON.stringify({ name: result.value }),
                         success: function () {
-                            Swal.fire({ icon: 'success', title: 'Eklendi!', timer: 1500, showConfirmButton: false, target: document.getElementById('addSurveyModal'), customClass: { container: 'my-swal-container' } });
+                            showSuccessToast('Kategori eklendi.'); // 🔥 TOAST
                             loadCategories();
                         }
                     });
@@ -311,7 +305,6 @@
 
         var currentEditingSurvey = null;
 
-        // 5. DÜZENLEME PENCERESİNİ AÇ
         function openEditModal(id) {
             $.ajax({
                 url: "https://localhost:7283/api/survey/" + id,
@@ -341,7 +334,7 @@
 
         $("#btnUpdateSurvey").click(function () {
             if (!$("#editSurveyTitle").val() || !$("#editCategoryId").val()) {
-                Swal.fire('Uyarı', 'Başlık ve Kategori boş bırakılamaz!', 'warning');
+                showErrorToast('Başlık ve Kategori boş bırakılamaz!'); // 🔥 TOAST
                 return;
             }
 
@@ -352,7 +345,7 @@
                 title: $("#editSurveyTitle").val(),
                 description: $("#editSurveyDescription").val(),
                 categoryId: parseInt($("#editCategoryId").val()),
-                status: $("#editSurveyStatus").val(), 
+                status: $("#editSurveyStatus").val(),
                 endDate: newEndDate ? newEndDate : null,
                 createdDate: currentEditingSurvey.createdDate,
                 isAnonymous: currentEditingSurvey.isAnonymous
@@ -365,11 +358,11 @@
                 data: JSON.stringify(updateData),
                 success: function () {
                     $("#editSurveyModal").modal('hide');
-                    Swal.fire({ icon: 'success', title: 'Güncellendi!', timer: 1500, showConfirmButton: false });
+                    showSuccessToast('Anket başarıyla güncellendi.'); // 🔥 TOAST
                     loadSurveys();
                 },
                 error: function () {
-                    Swal.fire('Hata!', 'Güncelleme sırasında bir sorun oluştu.', 'error');
+                    showErrorToast('Güncelleme sırasında bir sorun oluştu.'); // 🔥 TOAST
                 }
             });
         });
@@ -389,10 +382,14 @@
                         url: "https://localhost:7283/api/survey/" + id + "/clone",
                         type: "POST",
                         success: function () {
-                            Swal.fire({ icon: 'success', title: 'Kopyalandı!', timer: 1500, showConfirmButton: false });
-                            loadSurveys(); // Tabloyu yenile
+                            Swal.close();
+                            showSuccessToast('Anket başarıyla kopyalandı.'); // 🔥 TOAST
+                            loadSurveys();
                         },
-                        error: function () { Swal.fire('Hata!', 'Kopyalama başarısız oldu.', 'error'); }
+                        error: function () {
+                            Swal.close();
+                            showErrorToast('Kopyalama başarısız oldu.'); // 🔥 TOAST
+                        }
                     });
                 }
             });

@@ -52,13 +52,13 @@
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
         $(document).ready(function () {
             $("#btnRegister").click(function () {
                 var btn = $(this);
 
-                // Form Verilerini Topla (API'ndeki RegisterDto yapısına göre)
                 var registerData = {
                     firstName: $("#firstName").val().trim(),
                     lastName: $("#lastName").val().trim(),
@@ -67,13 +67,11 @@
                     password: $("#password").val()
                 };
 
-                // Basit boşluk kontrolü
                 if (!registerData.firstName || !registerData.lastName || !registerData.userName || !registerData.email || !registerData.password) {
-                    Swal.fire('Eksik Bilgi', 'Lütfen tüm alanları doldurun!', 'warning');
+                    showErrorToast('Lütfen tüm alanları doldurun!');
                     return;
                 }
 
-                // Butonu deaktif yap (Çift tıklamayı önlemek için)
                 btn.prop('disabled', true).text('Kayıt Yapılıyor...');
 
                 $.ajax({
@@ -82,24 +80,18 @@
                     contentType: "application/json",
                     data: JSON.stringify(registerData),
                     success: function (res) {
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Hoş Geldiniz!',
-                            text: 'Hesabınız başarıyla oluşturuldu. Şimdi giriş yapabilirsiniz.',
-                            confirmButtonText: 'Giriş Sayfasına Git'
-                        }).then((result) => {
+                        showSuccessToast('Hesabınız başarıyla oluşturuldu! Giriş sayfasına yönlendiriliyorsunuz...');
+                        setTimeout(function() {
                             window.location.href = '/Auth/Login';
-                        });
+                        }, 2000);
                     },
                     error: function (xhr) {
                         btn.prop('disabled', false).text('KAYIT OL');
 
                         var errorMsg = "Kayıt işlemi başarısız oldu.";
-                        // API'den dönen özel hataları (Örn: "Bu kullanıcı adı zaten alınmış") yakala
                         if (xhr.responseText) {
                             try {
                                 var response = JSON.parse(xhr.responseText);
-                                // Identity hataları dizi olarak dönebilir
                                 if(Array.isArray(response)) {
                                     errorMsg = response[0].description;
                                 } else if (response.message) {
@@ -111,7 +103,7 @@
                                 errorMsg = xhr.responseText;
                             }
                         }
-                        Swal.fire('Hata!', errorMsg, 'error');
+                        showErrorToast(errorMsg);
                     }
                 });
             });

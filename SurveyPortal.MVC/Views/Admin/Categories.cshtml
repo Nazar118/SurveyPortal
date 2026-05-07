@@ -46,7 +46,6 @@
             loadCategoriesPage();
         });
 
-        // Kategorileri Listele (Düzenle Butonu Eklendi)
         function loadCategoriesPage() {
             $.ajax({
                 url: "https://localhost:7283/api/category",
@@ -60,7 +59,6 @@
                                 <td>${i + 1}</td>
                                 <td class="font-weight-bold">${cat.name}</td>
                                 <td>
-                                    <!-- 🔥 YENİ: DÜZENLE BUTONU -->
                                     <button onclick="editCategory('${cat.id}', '${cat.name}')" class="btn btn-sm btn-primary me-2">
                                         <i class="mdi mdi-pencil"></i> Düzenle
                                     </button>
@@ -75,7 +73,6 @@
             });
         }
 
-        // Kategori Ekle
         function addNewCategory() {
             Swal.fire({
                 title: 'Yeni Kategori',
@@ -93,7 +90,7 @@
                         contentType: "application/json",
                         data: JSON.stringify({ name: result.value }),
                         success: function () {
-                            Swal.fire('Başarılı!', 'Kategori eklendi.', 'success');
+                            showSuccessToast('Kategori başarıyla eklendi.'); // 🔥 TOAST
                             loadCategoriesPage();
                         }
                     });
@@ -105,7 +102,7 @@
             Swal.fire({
                 title: 'Kategoriyi Düzenle',
                 input: 'text',
-                inputValue: currentName, 
+                inputValue: currentName,
                 showCancelButton: true,
                 confirmButtonText: 'Güncelle',
                 confirmButtonColor: '#b66dff',
@@ -118,18 +115,17 @@
                         contentType: "application/json",
                         data: JSON.stringify({ id: parseInt(id), name: result.value }),
                         success: function () {
-                            Swal.fire({ icon: 'success', title: 'Güncellendi!', timer: 1500, showConfirmButton: false });
+                            showSuccessToast('Kategori başarıyla güncellendi.'); // 🔥 TOAST
                             loadCategoriesPage();
                         },
                         error: function() {
-                            Swal.fire('Hata!', 'Kategori güncellenemedi.', 'error');
+                            showErrorToast('Kategori güncellenemedi.'); // 🔥 TOAST
                         }
                     });
                 }
             });
         }
 
-        // Kategori Sil
         function deleteCategory(id) {
             Swal.fire({
                 title: 'Emin misiniz?',
@@ -144,7 +140,7 @@
                         url: "https://localhost:7283/api/category/" + id,
                         type: "DELETE",
                         success: function () {
-                            Swal.fire('Silindi!', 'Kategori başarıyla silindi.', 'success');
+                            showSuccessToast('Kategori başarıyla silindi.'); // 🔥 TOAST
                             loadCategoriesPage();
                         }
                     });

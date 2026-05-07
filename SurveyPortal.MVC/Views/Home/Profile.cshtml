@@ -224,7 +224,7 @@
                 var email = $("#detailEmail").val().trim();
 
                 if (!username || !email) {
-                    Swal.fire('Eksik Alan', 'Lütfen kullanıcı adı ve e-posta alanlarını doldurun.', 'warning');
+                    showErrorToast('Lütfen kullanıcı adı ve e-posta alanlarını doldurun.');
                     return;
                 }
 
@@ -238,12 +238,12 @@
                     data: JSON.stringify({ userName: username, email: email }),
                     success: function (res) {
                         btn.prop('disabled', false).html('<i class="mdi mdi-content-save me-1"></i> Bilgilerimi Güncelle');
-                        $("#sideUsername").text(username); // Sol paneli de hemen güncelle
-                        Swal.fire('Harika!', 'Profil bilgileriniz başarıyla güncellendi.', 'success');
+                        $("#sideUsername").text(username);
+                        showSuccessToast('Profil bilgileriniz başarıyla güncellendi.');
                     },
                     error: function (xhr) {
                         btn.prop('disabled', false).html('<i class="mdi mdi-content-save me-1"></i> Bilgilerimi Güncelle');
-                        Swal.fire('Hata!', xhr.responseText || 'Güncelleme sırasında bir hata oluştu.', 'error');
+                        showErrorToast(xhr.responseText || 'Güncelleme sırasında bir hata oluştu.');
                     }
                 });
             });
@@ -257,12 +257,12 @@
                 var newPassConfirm = $("#newPasswordConfirm").val();
 
                 if (!currentPass || !newPass || !newPassConfirm) {
-                    Swal.fire('Eksik Alan', 'Lütfen tüm şifre alanlarını doldurun.', 'warning');
+                    showErrorToast('Lütfen tüm şifre alanlarını doldurun.');
                     return;
                 }
 
                 if (newPass !== newPassConfirm) {
-                    Swal.fire('Uyumsuzluk', 'Yeni şifre ile tekrarı birbiriyle eşleşmiyor!', 'warning');
+                    showErrorToast('Yeni şifre ile tekrarı birbiriyle eşleşmiyor!');
                     return;
                 }
 
@@ -276,12 +276,12 @@
                     data: JSON.stringify({ currentPassword: currentPass, newPassword: newPass }),
                     success: function (res) {
                         btn.prop('disabled', false).html('<i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle');
-                        $("#currentPassword, #newPassword, #newPasswordConfirm").val(''); // Formu temizle
-                        Swal.fire('Başarılı!', 'Şifreniz güvenli bir şekilde değiştirildi.', 'success');
+                        $("#currentPassword, #newPassword, #newPasswordConfirm").val('');
+                        showSuccessToast('Şifreniz güvenli bir şekilde değiştirildi.');
                     },
                     error: function (xhr) {
                         btn.prop('disabled', false).html('<i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle');
-                        Swal.fire('Hata!', xhr.responseText || 'Şifreniz değiştirilemedi.', 'error');
+                        showErrorToast(xhr.responseText || 'Şifreniz değiştirilemedi.');
                     }
                 });
             });
@@ -300,7 +300,6 @@
                     $("#sideUsername").text(data.username);
                     $("#sideRole").text(data.role);
 
-                    // Form inputlarına değerleri (val) basıyoruz
                     $("#detailUsername").val(data.username);
                     $("#detailEmail").val(data.email);
                     $("#detailRole").text(data.role);

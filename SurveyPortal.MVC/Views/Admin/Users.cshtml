@@ -125,10 +125,12 @@
                     $.ajax({
                         url: "https://localhost:7283/api/user/toggle-status/" + id, type: "PUT",
                         success: function (res) {
-                            Swal.fire({ icon: 'success', title: 'Başarılı!', text: res.message, timer: 1500, showConfirmButton: false });
+                            showSuccessToast(res.message); // 🔥 TOAST
                             loadUsers();
                         },
-                        error: function () { Swal.fire('Hata!', 'İşlem gerçekleştirilemedi.', 'error'); }
+                        error: function () {
+                            showErrorToast('İşlem gerçekleştirilemedi.'); // 🔥 TOAST
+                        }
                     });
                 }
             });

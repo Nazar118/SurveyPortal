@@ -168,6 +168,7 @@
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
         $(document).ready(function () {
@@ -188,12 +189,7 @@
                 var passwordInput = $("#password").val().trim();
 
                 if (!usernameInput || !passwordInput) {
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Eksik Bilgi',
-                        text: 'Lütfen kullanıcı adı ve şifrenizi giriniz.',
-                        confirmButtonColor: '#b66dff'
-                    });
+                    showErrorToast('Lütfen kullanıcı adı ve şifrenizi giriniz.');
                     return;
                 }
 
@@ -216,26 +212,16 @@
                         localStorage.setItem("userRole", gelenRol);
 
                         var isAdmin = (gelenRol.toLowerCase() === "admin");
-                        var redirectMessage = isAdmin ? 'Yönetici paneline yönlendiriliyorsunuz...' : 'Ana sayfaya yönlendiriliyorsunuz...';
 
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Başarılı!',
-                            text: redirectMessage,
-                            showConfirmButton: false,
-                            timer: 1500
-                        }).then(function() {
+                        showSuccessToast('Giriş başarılı! Yönlendiriliyorsunuz...');
+
+                        setTimeout(function() {
                             window.location.href = isAdmin ? "/Admin/Index" : "/Home/Index";
-                        });
+                        }, 1500);
                     },
                     error: function (xhr) {
                         btn.prop("disabled", false).text("GİRİŞ YAP");
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Giriş Başarısız!',
-                            text: 'Kullanıcı adı veya şifre hatalı.',
-                            confirmButtonColor: '#b66dff'
-                        });
+                        showErrorToast('Kullanıcı adı veya şifre hatalı.');
                     }
                 });
             });

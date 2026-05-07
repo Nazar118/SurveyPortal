@@ -6,31 +6,6 @@
     <link rel="stylesheet" href="~/assets/vendors/mdi/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="~/assets/vendors/css/vendor.bundle.base.css">
     <link rel="stylesheet" href="~/assets/css/style.css">
-
-    <script>
-        var token = localStorage.getItem("token");
-        var role = localStorage.getItem("userRole");
-
-        if (!token || !role || role.toLowerCase() !== "admin") {
-            window.location.replace("/Home/Index"); 
-        }
-
-        $.ajaxSetup({
-            beforeSend: function (xhr) {
-                if (token) {
-                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
-                }
-            },
-            error: function (jqXHR) {
-                if (jqXHR.status === 401 || jqXHR.status === 403) {
-                    alert("Oturumunuzun süresi doldu veya yetkiniz reddedildi. Lütfen tekrar giriş yapın.");
-                    localStorage.removeItem("token");
-                    localStorage.removeItem("userRole");
-                    window.location.replace("/Home/Index");
-                }
-            }
-        });
-    </script>
 </head>
 <body>
     <div class="container-scroller">
@@ -40,7 +15,13 @@
                 <a class="navbar-brand brand-logo" href="/Admin/Index"><h3 class="text-primary m-0 font-weight-bold">SurveyPortal</h3></a>
             </div>
             <div class="navbar-menu-wrapper d-flex align-items-stretch">
-                <ul class="navbar-nav navbar-nav-right">
+                <ul class="navbar-nav navbar-nav-right d-flex align-items-center">
+                    <li class="nav-item me-3">
+                        <a class="nav-link btn-dark-mode-toggle" href="#" title="Gece/Gündüz Modu">
+                            <i class="mdi mdi-weather-night darkModeIcon text-dark" style="font-size: 1.5rem;"></i>
+                        </a>
+                    </li>
+
                     <li class="nav-item">
                         <a class="nav-link text-danger font-weight-bold" href="#" onclick="logout()" id="btnLogout">
                             <i class="mdi mdi-power"></i> Çıkış Yap
@@ -109,11 +90,15 @@
 
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="~/assets/vendors/js/vendor.bundle.base.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script src="~/assets/js/off-canvas.js"></script>
     <script src="~/assets/js/misc.js"></script>
-    <script src="~/js/site.js"></script>
+
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         function logout() {
