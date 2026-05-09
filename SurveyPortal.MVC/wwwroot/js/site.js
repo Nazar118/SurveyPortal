@@ -117,6 +117,16 @@ const darkModeCss = `
             border-color: #b66dff !important;
             cursor: pointer;
         }
+        /* 🔥 YENİ: Profil Sayfası (Kullanıcı Paneli)  Beyaz Hover Çözümleri */
+        body.dark-mode .nav-pills .nav-link:hover:not(.active) {
+            background-color: #2a2a2a !important;
+            color: #b66dff !important;
+        }
+        body.dark-mode .survey-list-item:hover {
+            background-color: #2a2a2a !important;
+            border-left-color: #b66dff !important;
+        }
+       
     </style>
 `;
 $("head").append(darkModeCss);

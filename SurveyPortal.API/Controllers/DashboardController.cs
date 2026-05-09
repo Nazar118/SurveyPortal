@@ -1,11 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SurveyPortal.API.Models;
+using SurveyPortal.API.Data;
 using SurveyPortal.API.DTOs;
+using SurveyPortal.API.Models;
 using SurveyPortal.API.Repositories.Interfaces;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Collections.Generic;
-using System;
+using Microsoft.EntityFrameworkCore;
 
 namespace SurveyPortal.API.Controllers
 {
@@ -83,6 +85,38 @@ namespace SurveyPortal.API.Controllers
             };
 
             return Ok(stats);
+        }
+        [HttpGet("overview")]
+        public async Task<IActionResult> GetOverview([FromServices] AppDbContext context)
+        {
+            // 1. Temel İstatistikler
+            var totalSurvey = await context.Surveys.CountAsync(s => !s.IsDeleted && s.Status == "Active");
+            var totalCategory = await context.Categories.CountAsync();
+            var todayParticipants = await context.Set<SurveyResponse>().CountAsync(r => r.StartedAt.Date == DateTime.Today);
+
+            // 2. Haftanın/Günün En Popüler (Trending) Anketini Bul
+            var trendingSurveyId = await context.Set<SurveyResponse>()
+                .GroupBy(r => r.SurveyId)
+                .OrderByDescending(g => g.Count())
+                .Select(g => g.Key)
+                .FirstOrDefaultAsync();
+
+            var trendingSurvey = await context.Surveys
+                .Where(s => s.Id == trendingSurveyId && !s.IsDeleted)
+                .Select(s => new {
+                    s.Id,
+                    s.Title,
+                    ParticipantCount = context.Set<SurveyResponse>().Count(r => r.SurveyId == s.Id)
+                })
+                .FirstOrDefaultAsync();
+
+            return Ok(new
+            {
+                TotalSurvey = totalSurvey,
+                TotalCategory = totalCategory,
+                TodayParticipants = todayParticipants,
+                TrendingSurvey = trendingSurvey
+            });
         }
     }
 }
