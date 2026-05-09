@@ -4,90 +4,173 @@
 }
 
 <style>
-    .result-card {
-        border-radius: 15px;
-        border: none;
+    body {
+        background-color: #f4f7fa;
     }
 
-    .progress {
-        height: 28px;
-        border-radius: 8px;
-        background-color: #f3f3f3;
+        body.dark-mode {
+            background-color: #121212;
+        }
+
+    .result-container {
+        max-width: 900px;
+        margin: 0 auto;
+        margin-top: 40px;
+        margin-bottom: 60px;
+    }
+
+    /* 🔥 INSIGHT KART TASARIMI */
+    .insight-card {
+        background: linear-gradient(135deg, rgba(182, 109, 255, 0.1) 0%, rgba(79, 172, 254, 0.1) 100%);
+        border: 1px solid rgba(182, 109, 255, 0.2);
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 30px;
+    }
+
+    body.dark-mode .insight-card {
+        background: rgba(182, 109, 255, 0.05);
+    }
+
+    /* 🔥 PROGRESS BAR & WINNER HIGHLIGHT */
+    .result-option {
         position: relative;
-        overflow: visible;
+        background: #fff;
+        border: 1px solid #ebedf2;
+        border-radius: 12px;
+        padding: 15px 20px;
+        margin-bottom: 12px;
+        overflow: hidden;
+        z-index: 1;
     }
 
-    .progress-bar {
-        border-radius: 8px;
-        transition: width 1.5s ease-in-out;
-        text-align: left;
-        padding-left: 15px;
+    body.dark-mode .result-option {
+        background: #2c2c2c;
+        border-color: #444;
+        color: #e0e0e0;
+    }
+
+    /* Arka plan dolgusu (Animasyonlu) */
+    .result-option-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        background: rgba(182, 109, 255, 0.1);
+        z-index: -1;
+        width: 0%;
+        transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .result-option.winner {
+        border-color: #b66dff;
+    }
+
+        .result-option.winner .result-option-bg {
+            background: rgba(182, 109, 255, 0.2);
+        }
+
+    .option-meta {
         display: flex;
-        flex-direction: row;
-        align-items: center;
         justify-content: space-between;
-        padding-right: 15px;
+        align-items: center;
     }
 
     .option-text {
-        font-weight: 500;
-        z-index: 2;
-        position: absolute;
-        left: 15px;
-        color: #333;
-        line-height: 28px;
+        font-weight: 600;
+        font-size: 1.05rem;
     }
 
-    .percentage-text {
+    .option-percent {
+        font-weight: 800;
+        font-size: 1.1rem;
+        color: #b66dff;
+    }
+
+    /* Etiketler (👑 Winner & ✔ Your Choice) */
+    .badge-winner {
+        background: #ffd700;
+        color: #856404;
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 6px;
         font-weight: bold;
-        z-index: 2;
-        position: absolute;
-        right: 15px;
-        color: #333;
-        line-height: 28px;
+        margin-left: 8px;
     }
 
-    /* Metin cevapları için scrollable alan */
-    .text-answers-box {
-        max-height: 200px;
-        overflow-y: auto;
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 15px;
+    .badge-user-choice {
+        background: #28a745;
+        color: white;
+        font-size: 0.75rem;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: bold;
+        margin-left: 8px;
     }
 
-    .text-answer-item {
-        background: white;
-        padding: 10px 15px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        border-left: 4px solid #b66dff;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    /* 🔥 WORD CLOUD TASARIMI */
+    .word-cloud-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        background: rgba(0,0,0,0.02);
+        border-radius: 12px;
     }
+
+    body.dark-mode .word-cloud-container {
+        background: rgba(255,255,255,0.02);
+    }
+
+    .cloud-word {
+        line-height: 1;
+        transition: transform 0.3s;
+    }
+
+        .cloud-word:hover {
+            transform: scale(1.1);
+            cursor: default;
+        }
+
 </style>
 
-<div class="row justify-content-center mt-4 mb-5">
-    <div class="col-lg-8">
+<div class="result-container">
+    <div class="card shadow-sm border-0 rounded-xl" style="border-radius: 20px;">
 
-        <!-- Üst Başlık ve Katılımcı Bilgisi -->
-        <div class="card shadow-sm result-card mb-4 bg-white">
-            <div class="card-body p-4 text-center">
-                <h2 class="text-primary font-weight-bold mb-3" id="surveyTitle">Sonuçlar Yükleniyor...</h2>
-                <div class="d-inline-flex align-items-center bg-light rounded-pill px-4 py-2">
-                    <i class="mdi mdi-account-group text-success fs-4 me-2"></i>
-                    <h5 class="m-0 text-dark">Toplam <span id="totalParticipants" class="font-weight-bold text-success">0</span> Kişi Katıldı</h5>
-                </div>
-                <div class="mt-3">
-                    <a href="/Home/Index" class="btn btn-sm btn-outline-secondary rounded-pill px-4">Ana Sayfaya Dön</a>
-                </div>
+        <div class="card-header bg-white border-bottom p-4 pt-5 text-center">
+            <div class="mb-3">
+                <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 font-weight-bold">
+                    <i class="mdi mdi-chart-donut"></i> Anket Sonuçları
+                </span>
+            </div>
+            <h2 class="font-weight-bold text-dark mb-2" id="resTitle">Yükleniyor...</h2>
+            <p class="text-muted" id="resDesc"></p>
+            <div class="text-muted font-weight-bold mt-3">
+                <i class="mdi mdi-account-group text-primary" style="font-size: 1.2rem;"></i> Toplam <span id="resTotal" class="text-dark">0</span> Katılımcı
             </div>
         </div>
 
-        <!-- Sonuçların Basılacağı Alan -->
-        <div id="resultsContainer">
-            <div class="text-center py-5">
-                <div class="spinner-border text-primary" role="status"></div>
-                <p class="mt-3 text-muted">Veriler analiz ediliyor...</p>
+        <div class="card-body p-4 p-md-5">
+            <!-- İÇGÖRÜ (INSIGHTS) BÖLÜMÜ -->
+            <div id="insightsContainer" style="display: none;">
+                <div class="insight-card">
+                    <h5 class="font-weight-bold text-primary mb-3"><i class="mdi mdi-lightbulb-on-outline"></i> Öne Çıkan İçgörüler</h5>
+                    <ul class="mb-0 text-muted" id="insightsList" style="line-height: 1.8;"></ul>
+                </div>
+            </div>
+
+            <!-- SORULAR VE ÇUBUKLAR -->
+            <div id="resultsWrapper">
+                <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+            </div>
+
+            <!-- 🔥 ANA SAYFAYA DÖN BUTONU 🔥 -->
+            <div class="text-center mt-5 pt-4 border-top">
+                <a href="/Home/Index" class="btn btn-outline-primary rounded-pill px-5 py-2 font-weight-bold shadow-sm" style="transition: all 0.3s;">
+                    <i class="mdi mdi-arrow-left me-2"></i> Keşfetmeye Geri Dön
+                </a>
             </div>
         </div>
 
@@ -98,7 +181,7 @@
 
 @section Scripts {
     <script>
-        var currentSurveyId = $("#hiddenSurveyId").val();
+        var surveyId = $("#hiddenSurveyId").val();
 
         $(document).ready(function () {
             loadResults();
@@ -106,83 +189,123 @@
 
         function loadResults() {
             var token = localStorage.getItem("token");
-
             $.ajax({
-                url: "https://localhost:7283/api/answer/result/" + currentSurveyId,
+                url: `https://localhost:7283/api/survey/${surveyId}/results`,
                 type: "GET",
                 headers: { "Authorization": "Bearer " + token },
                 success: function (data) {
-                    $("#surveyTitle").text(data.surveyTitle);
-                    $("#totalParticipants").text(data.totalParticipants);
-
-                    var container = $("#resultsContainer");
-                    container.empty();
-
-                    if(data.totalParticipants === 0){
-                        container.html('<div class="alert alert-info text-center">Bu ankete henüz kimse katılmamış. İlk katılan sen ol!</div>');
-                        return;
-                    }
-
-                    $.each(data.questions, function (index, q) {
-                        var html = `<div class="card shadow-sm result-card mb-4"><div class="card-body p-4">
-                                        <h5 class="font-weight-bold mb-4">${index + 1}. ${q.questionText}</h5>`;
-
-                        if (q.questionType === 0) {
-                            var userAnsHtml = q.userTextAnswer ?
-                                `<div class="alert alert-success p-3 mb-3 border-0"><strong>Senin Cevabın:</strong> ${q.userTextAnswer}</div>` : '';
-
-                            var otherAnswersHtml = "";
-                            if(q.textAnswers && q.textAnswers.length > 0){
-                                $.each(q.textAnswers, function(i, ans){
-                                    otherAnswersHtml += `<div class="text-answer-item"><i class="mdi mdi-comment-text-outline text-muted me-2"></i> ${ans}</div>`;
-                                });
-                            } else {
-                                otherAnswersHtml = `<p class="text-muted small">Henüz metin yanıtı yok.</p>`;
-                            }
-
-                            html += `${userAnsHtml}
-                                     <h6 class="text-muted mb-2 font-weight-bold" style="font-size:0.85rem;">DİĞER YANITLAR</h6>
-                                     <div class="text-answers-box">${otherAnswersHtml}</div>`;
-                        }
-                        else {
-                            if(q.options && q.options.length > 0){
-                                var maxVotes = q.options[0].voteCount;
-
-                                $.each(q.options, function(oIndex, opt){
-        var barColor = (opt.voteCount === maxVotes && maxVotes > 0) ? "bg-gradient-success" : "bg-gradient-primary";
-        var badge = opt.isUserChoice ? `<span class="badge bg-warning text-dark ms-2" style="font-size:0.7rem;"><i class="mdi mdi-star"></i> Senin Seçimin</span>` : '';
-
-        html += `
-            <div class="mb-3 position-relative">
-                <div class="d-flex justify-content-between mb-1">
-                    <span style="font-size: 0.9rem; font-weight: 500;">${opt.optionText} ${badge}</span>
-                </div>
-                <div class="progress shadow-sm">
-                    <div class="progress-bar ${barColor}" role="progressbar" style="width: 0%;" data-width="${opt.percentage}%" aria-valuenow="${opt.percentage}" aria-valuemin="0" aria-valuemax="100">
-                        <span class="text-dark font-weight-bold" style="position: absolute; right: 15px; text-shadow: 0px 0px 4px rgba(255,255,255,0.9); z-index: 5;">%${opt.percentage} (${opt.voteCount} Oy)</span>
-                    </div>
-                </div>
-            </div>
-        `;
-                                });
-                            }
-                        }
-
-                        html += `</div></div>`;
-                        container.append(html);
-                    });
-
-                    setTimeout(function() {
-                        $('.progress-bar').each(function() {
-                            $(this).css('width', $(this).attr('data-width'));
-                        });
-                    }, 100);
-
+                    renderHeader(data);
+                    renderInsights(data.insights);
+                    renderQuestions(data.questions);
                 },
-                error: function (xhr) {
-                    $("#resultsContainer").html('<div class="alert alert-danger text-center">Sonuçlar yüklenirken hata oluştu!</div>');
+                error: function () {
+                    showErrorToast("Sonuçlar yüklenirken bir hata oluştu.");
                 }
             });
+        }
+
+        function renderHeader(data) {
+            $("#resTitle").text(data.title);
+            $("#resDesc").text(data.description);
+            $("#resTotal").text(data.totalParticipants);
+        }
+
+        function renderInsights(insights) {
+            if (insights && insights.length > 0) {
+                var list = $("#insightsList");
+                list.empty();
+                $.each(insights, function(i, text) {
+                    list.append(`<li>${text}</li>`);
+                });
+                $("#insightsContainer").slideDown();
+            }
+        }
+
+        function renderQuestions(questions) {
+            var wrapper = $("#resultsWrapper");
+            wrapper.empty();
+
+            if (!questions || questions.length === 0) {
+                wrapper.html('<div class="alert alert-info text-center">Bu ankete henüz katılım sağlanmamış.</div>');
+                return;
+            }
+
+            $.each(questions, function (index, q) {
+                var html = `<div class="mb-5 pb-3">`;
+                html += `<h4 class="font-weight-bold mb-4">${index + 1}. ${q.questionText}</h4>`;
+
+                if (q.questionType === "Text") {
+                    // WORD CLOUD (Kelime Bulutu) OLUŞTURMA
+                    html += generateWordCloud(q.textAnswers);
+                } else {
+                    // PROGRESS BARS (Seçenekler)
+                    $.each(q.options, function(i, opt) {
+                        var isWinner = opt.isWinner ? "winner" : "";
+                        var winnerBadge = opt.isWinner ? `<span class="badge-winner">👑 Lider</span>` : "";
+                        var userChoiceBadge = opt.isUserChoice ? `<span class="badge-user-choice"><i class="mdi mdi-check"></i> Sen Seçtin</span>` : "";
+
+                        html += `
+                            <div class="result-option ${isWinner}">
+                                <div class="result-option-bg" data-width="${opt.percentage}%"></div>
+                                <div class="option-meta">
+                                    <div class="option-text text-dark">
+                                        ${opt.optionText}
+                                        ${winnerBadge}
+                                        ${userChoiceBadge}
+                                    </div>
+                                    <div class="option-percent">${opt.percentage}% <span class="text-muted" style="font-size:0.8rem;font-weight:normal;">(${opt.count} oy)</span></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                html += `</div>`;
+                wrapper.append(html);
+            });
+
+            // Sayfa yüklendikten az sonra animasyonları tetikle
+            setTimeout(() => {
+                $(".result-option-bg").each(function() {
+                    $(this).css("width", $(this).attr("data-width"));
+                });
+            }, 100);
+        }
+
+        // 🔥 BASİT VE ŞIK BİR KELİME BULUTU (WORD CLOUD) ALGORİTMASI
+        function generateWordCloud(sentences) {
+            if (!sentences || sentences.length === 0) return `<div class="text-muted text-center py-3 bg-light rounded">Henüz yazılı cevap yok.</div>`;
+
+            // Tüm cümleleri kelimelere böl, noktalama işaretlerini at, küçük harf yap
+            var words = [];
+            var stopWords = ["ve", "ile", "bir", "bu", "da", "de", "için", "çok", "daha", "gibi", "kadar"]; // Atılacak bağlaçlar
+
+            $.each(sentences, function(i, sentence) {
+                var cleaned = sentence.toLowerCase().replace(/[.,!?;:()]/g, '').split(' ');
+                $.each(cleaned, function(j, w) {
+                    if (w.length > 2 && !stopWords.includes(w)) words.push(w);
+                });
+            });
+
+            // Frekans (Sıklık) hesapla
+            var counts = {};
+            $.each(words, function(i, w) { counts[w] = (counts[w] || 0) + 1; });
+
+            // Sıklığa göre HTML üret (Büyüklük ve Renk ayarlaması)
+            var cloudHtml = `<div class="word-cloud-container">`;
+            var colors = ["#b66dff", "#4facfe", "#ff6b6b", "#43d39e", "#f3a683", "#2c3e50"];
+
+            $.each(counts, function(word, count) {
+                var fontSize = 1 + (count * 0.2); // En az 1rem, sıklığa göre büyür
+                if (fontSize > 3) fontSize = 3; // Maksimum 3rem
+                var color = colors[Math.floor(Math.random() * colors.length)];
+                var weight = count > 1 ? "bold" : "normal";
+
+                cloudHtml += `<span class="cloud-word" style="font-size: ${fontSize}rem; color: ${color}; font-weight: ${weight};" title="${count} kez kullanıldı">${word}</span>`;
+            });
+            cloudHtml += `</div>`;
+
+            return cloudHtml;
         }
     </script>
 }

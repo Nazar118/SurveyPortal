@@ -1,336 +1,389 @@
 ﻿@{
-    ViewData["Title"] = "Anketi Çöz";
+    ViewData["Title"] = "Anket Çöz";
     Layout = "~/Views/Shared/_UserLayout.cshtml";
 }
 
 <style>
-    .step-container {
-        display: none;
-        animation: fadeIn 0.5s ease-in-out;
+    /* 🔥 AŞAMA 3.1 & 3.4: STEP SİSTEMİ VE ANİMASYONLAR */
+    body { background-color: #f4f7fa; }
+    body.dark-mode { background-color: #121212; }
+
+    .survey-container { max-width: 800px; margin: 0 auto; margin-top: 40px; margin-bottom: 60px; }
+    
+    .question-step { 
+        display: none; 
+        animation: fadeInRight 0.4s cubic-bezier(0.165, 0.84, 0.44, 1) forwards; 
+    }
+    .question-step.active { display: block; }
+    
+    @@keyframes fadeInRight { 
+        from { opacity: 0; transform: translateX(30px); } 
+        to { opacity: 1; transform: translateX(0); } 
     }
 
-        .step-container.active {
-            display: block;
-        }
+    /* 🔥 PROGRESS BAR (İlerleme Çubuğu) */
+    .progress-wrapper { background: #e9ecef; border-radius: 10px; height: 8px; width: 100%; overflow: hidden; margin-top: 15px; }
+    .progress-fill { background: linear-gradient(90deg, #b66dff, #4facfe); height: 100%; width: 0%; transition: width 0.5s ease-in-out; border-radius: 10px; }
+    body.dark-mode .progress-wrapper { background: #333; }
 
-    @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
+    /* 🔥 SEÇENEK (OPTION) TASARIMLARI */
     .option-label {
         display: block;
         padding: 15px 20px;
         border: 2px solid #ebedf2;
-        border-radius: 10px;
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.2s ease;
-        background: white;
+        font-weight: 500;
+        background: #fff;
     }
-
-        .option-label:hover {
-            border-color: #b66dff;
-            background: #fcf9ff;
-        }
-
-    .form-check-input:checked + .option-label {
+    .option-label:hover { border-color: #b66dff; background: rgba(182, 109, 255, 0.05); }
+    
+    /* Input (Radio/Checkbox) Gizli ama Tıklanabilir */
+    .option-input { display: none; }
+    .option-input:checked + .option-label {
         border-color: #b66dff;
-        background: #f4eaff;
-        font-weight: bold;
+        background: rgba(182, 109, 255, 0.1);
+        color: #b66dff;
+        box-shadow: 0 4px 10px rgba(182, 109, 255, 0.15);
     }
 
-    .form-check-input {
-        display: none; 
+    body.dark-mode .option-label { background: #2c2c2c; border-color: #444; color: #e0e0e0; }
+    body.dark-mode .option-input:checked + .option-label { background: rgba(182, 109, 255, 0.2); }
+
+    /* 🔥 VALIDATION (HATA) ANİMASYONU - SHAKE */
+    .shake-error {
+        animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        border-color: #ff4d4d !important;
     }
+    .shake-error .option-label { border-color: #ff4d4d !important; background: rgba(255, 77, 77, 0.05); }
+    
+    @@keyframes shake {
+        10%, 90% { transform: translate3d(-2px, 0, 0); }
+        20%, 80% { transform: translate3d(2px, 0, 0); }
+        30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+        40%, 60% { transform: translate3d(4px, 0, 0); }
+    }
+
+    .inline-error { color: #ff4d4d; font-size: 0.85rem; font-weight: bold; margin-top: 10px; display: none; }
 </style>
 
-<div class="row justify-content-center mb-5 mt-4">
-    <div class="col-lg-8">
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h3 class="text-primary font-weight-bold m-0" id="surveyTitle">Anket Yükleniyor...</h3>
-                    <a href="/Home/Index" class="btn btn-sm btn-outline-secondary rounded-pill px-3">
-                        <i class="mdi mdi-close"></i> Çıkış
-                    </a>
-                </div>
-                <p class="text-muted mb-4" id="surveyDesc"></p>
-
-                <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.85rem;">
-                    <span id="progressText">Soru 0 / 0</span>
-                    <span id="progressPercent">%0 Tamamlandı</span>
-                </div>
-                <div class="progress" style="height: 10px; border-radius: 5px;">
-                    <div class="progress-bar bg-gradient-success" id="surveyProgress" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
+<div class="survey-container">
+    <div class="card shadow-lg border-0 rounded-xl" style="border-radius: 20px; overflow: hidden;">
+        
+        <!-- ÜST KISIM (Başlık ve İlerleme) -->
+        <div class="card-header bg-white border-bottom p-4 pt-5">
+            <h2 class="font-weight-bold text-dark mb-2" id="surveyTitle">Yükleniyor...</h2>
+            <p class="text-muted" id="surveyDesc"></p>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <span class="text-primary font-weight-bold" id="progressText">%0 Tamamlandı</span>
+                <span class="text-muted font-weight-bold" id="stepText">Soru 1 / ?</span>
             </div>
+            <div class="progress-wrapper"><div class="progress-fill" id="progressBar"></div></div>
         </div>
 
-        <div id="questionsContainer" class="position-relative">
-            <div class="text-center py-5 bg-white shadow-sm rounded">
-                <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div>
-                <p class="mt-3 text-muted font-weight-bold">Sorular hazırlanıyor...</p>
-            </div>
+        <!-- ORTA KISIM (Soruların Geleceği Yer) -->
+        <div class="card-body p-4 p-md-5" id="questionContainer" style="min-height: 350px;">
+            <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
         </div>
 
-        <div class="d-flex justify-content-between mt-4 d-none" id="navigationArea">
-            <button class="btn btn-secondary btn-lg px-4" id="btnPrev" style="visibility: hidden;">
-                <i class="mdi mdi-arrow-left"></i> Geri
+        <!-- ALT KISIM (Navigasyon Butonları) -->
+        <div class="card-footer bg-light border-top p-4 d-flex justify-content-between align-items-center">
+            <button class="btn btn-outline-secondary px-4 py-2 rounded-pill font-weight-bold" id="btnPrev" style="display:none; transition: all 0.3s;">
+                <i class="mdi mdi-arrow-left me-1"></i> Önceki
             </button>
-            <button class="btn btn-gradient-primary btn-lg px-5 font-weight-bold shadow" id="btnNext">
-                İleri <i class="mdi mdi-arrow-right"></i>
+            <button class="btn btn-gradient-primary px-5 py-2 rounded-pill font-weight-bold ms-auto" id="btnNext" style="display:none; transition: all 0.3s;">
+                Sonraki <i class="mdi mdi-arrow-right ms-1"></i>
             </button>
-            <button class="btn btn-gradient-success btn-lg px-5 font-weight-bold shadow d-none" id="btnSubmitSurvey">
-                <i class="mdi mdi-send"></i> Yanıtları Gönder
+            <button class="btn btn-success px-5 py-2 rounded-pill font-weight-bold ms-auto" id="btnSubmit" style="display:none; transition: all 0.3s;">
+                <i class="mdi mdi-check-circle me-1"></i> Anketi Tamamla
             </button>
         </div>
+        
     </div>
 </div>
 
-<input type="hidden" id="hiddenSurveyId" value="@ViewBag.SurveyId" />
-
 @section Scripts {
     <script>
-        var currentSurveyId = $("#hiddenSurveyId").val();
-        var totalQuestions = 0;
-        var currentStep = 1;
-        var allQuestionsData = [];
+        var surveyId = window.location.pathname.split('/').pop();
+        var questionsData = [];
+        var currentStep = 0;
+        var answers = {};
+        var draftKey = 'survey_draft_' + surveyId;
 
         $(document).ready(function () {
-            var token = localStorage.getItem("token");
-            if (!token) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Giriş Gerekli',
-                    text: 'Anketleri çözebilmek için lütfen önce giriş yapın.',
-                    confirmButtonColor: '#b66dff',
-                    confirmButtonText: 'Giriş Yap'
-                }).then(() => {
-                    window.location.href = "/Auth/Login";
-                });
-                return; 
-            }
+            loadSurveyData();
 
-            loadSurveyDetail();
+            $("#btnNext").click(function () { nextStep(); });
+            $("#btnPrev").click(function () { prevStep(); });
+            $("#btnSubmit").click(function () { submitSurvey(); });
 
-        });
-
-        $(document).ready(function () {
-            loadSurveyDetail();
-
-            $("#btnNext").click(function () {
-                if (validateCurrentStep()) {
-                    currentStep++;
-                    showStep(currentStep);
-                }
-            });
-
-            $("#btnPrev").click(function () {
-                if (currentStep > 1) {
-                    currentStep--;
-                    showStep(currentStep);
-                }
-            });
-
-            $("#btnSubmitSurvey").click(function () {
-                if (validateCurrentStep()) {
-                    submitSurveyAnswers();
-                }
+            $(document).on("change", ".option-input, .text-input", function() {
+                saveDraft();
+                $(this).closest(".question-step").removeClass("shake-error");
+                $(this).closest(".question-step").find(".inline-error").slideUp();
             });
         });
 
-        function loadSurveyDetail() {
-            var token = localStorage.getItem("token");
+        // 🔥 YENİ: API'den gelen tipi ne olursa olsun doğru algılayan Akıllı Fonksiyon
+        function getQType(q) {
+            if (!q.options || q.options.length === 0) return "Text"; // Şık yoksa kesin yazıdır
+            var t = q.questionType ? q.questionType.toString().toLowerCase() : "";
+            if (t.includes("checkbox") || t.includes("çoklu") || t === "2") return "Checkbox";
+            return "Radio"; // Varsayılan şıklı soru
+        }
 
+        function loadSurveyData() {
+            var token = localStorage.getItem("token");
             $.ajax({
-                url: "https://localhost:7283/api/survey/" + currentSurveyId + "/detail",
+                url: `https://localhost:7283/api/survey/${surveyId}/detail`,
                 type: "GET",
                 headers: { "Authorization": "Bearer " + token },
-                success: function (surveyData) {
-                    $("#surveyTitle").text(surveyData.title);
-                    $("#surveyDesc").text(surveyData.description || "");
+                success: function (data) {
+                    $("#surveyTitle").text(data.title);
+                    $("#surveyDesc").text(data.description);
+                    questionsData = data.questions;
 
-                    allQuestionsData = surveyData.questions;
-                    totalQuestions = allQuestionsData.length;
+                    renderQuestions();
+                    checkDraftAndStart();
+                },
+                error: function () {
+                    showErrorToast("Anket yüklenirken bir hata oluştu.");
+                }
+            });
+        }
 
-                    var container = $("#questionsContainer");
-                    container.empty();
+        function renderQuestions() {
+            var container = $("#questionContainer");
+            container.empty();
 
-                    if (totalQuestions === 0) {
-                        container.html('<div class="alert alert-warning text-center shadow-sm">Bu ankette henüz soru bulunmuyor.</div>');
-                        return;
-                    }
+            $.each(questionsData, function (index, q) {
+                var requiredBadge = q.isRequired ? `<span class="text-danger ms-1" title="Zorunlu Alan">*</span>` : ``;
 
-                    $("#navigationArea").removeClass("d-none");
+                var html = `<div class="question-step" id="step_${index}" data-req="${q.isRequired}" data-qid="${q.id}">`;
+                html += `<h3 class="font-weight-bold mb-4 line-height-base">${q.questionText} ${requiredBadge}</h3>`;
 
-                    $.each(allQuestionsData, function (index, q) {
-                        var stepNumber = index + 1;
-                        var isRequiredHtml = q.isRequired ? '<span class="text-danger ms-1" title="Zorunlu Soru">*</span>' : '';
+                html += `<div class="options-container">`;
 
-                        var questionCard = `
-                            <div class="card shadow-sm border-0 step-container" id="step-${stepNumber}" data-qid="${q.id}" data-type="${q.questionType}" data-required="${q.isRequired}">
-                                <div class="card-body p-5">
-                                    <h4 class="font-weight-bold mb-4" style="line-height: 1.5;">${stepNumber}. ${q.questionText} ${isRequiredHtml}</h4>
-                                    <div class="question-body">
-                                        <!-- Şıklar buraya gelecek -->
+                var safeType = getQType(q); // Akıllı kontrol
+
+                if (safeType === "Text") {
+                    html += `<textarea class="form-control bg-light border-1 rounded-lg text-input p-3" rows="4" placeholder="Cevabınızı buraya yazın..." name="q_${q.id}"></textarea>`;
+                } else if (safeType === "Radio") {
+                    $.each(q.options, function(i, opt) {
+                        html += `
+                            <div class="mb-3">
+                                <input type="radio" class="option-input" name="q_${q.id}" id="opt_${opt.id}" value="${opt.id}">
+                                <label class="option-label" for="opt_${opt.id}">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3" style="width:24px;height:24px;border:2px solid #b66dff;border-radius:50%;display:flex;align-items:center;justify-content:center;"><i class="mdi mdi-circle text-white" style="font-size:12px;"></i></div>
+                                        ${opt.optionText}
                                     </div>
-                                </div>
+                                </label>
                             </div>
                         `;
-                        container.append(questionCard);
-
-                        var qBody = $(`#step-${stepNumber} .question-body`);
-
-                        if (q.questionType === 0) {
-                            qBody.html(`<textarea class="form-control form-control-lg bg-light" rows="4" placeholder="Yanıtınızı buraya yazın..."></textarea>`);
-                        }
-                        else {
-                            if (!q.options || q.options.length === 0) {
-                                qBody.html('<small class="text-danger"><i class="mdi mdi-alert"></i> Bu soru için şık girilmemiş!</small>');
-                            } else {
-                                var inputType = q.questionType === 1 ? "radio" : "checkbox";
-                                var inputName = q.questionType === 1 ? `q_${q.id}` : `q_${q.id}[]`;
-
-                                $.each(q.options, function(oIndex, opt) {
-                                    var inputId = `opt_${opt.id}`;
-                                    var optionHtml = `
-                                        <div class="form-check mb-3 p-0">
-                                            <input class="form-check-input" type="${inputType}" name="${inputName}" id="${inputId}" value="${opt.id}">
-                                            <label class="option-label" for="${inputId}">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="me-3 fs-5">
-                                                        <i class="mdi ${inputType === 'radio' ? 'mdi-radiobox-blank' : 'mdi-checkbox-blank-outline'} uncheck-icon text-muted"></i>
-                                                    </div>
-                                                    <span style="font-size: 1.05rem;">${opt.optionText}</span>
-                                                </div>
-                                            </label>
-                                        </div>
-                                    `;
-                                    qBody.append(optionHtml);
-                                });
-                            }
-                        }
                     });
-
-                    // Tıklanan Radio/Checkbox ikonunu değiştirme (UX)
-                    $(".form-check-input[type='radio']").change(function() {
-                        var name = $(this).attr('name');
-                        $(`input[name='${name}']`).siblings('.option-label').find('.uncheck-icon').removeClass('mdi-radiobox-marked text-primary').addClass('mdi-radiobox-blank text-muted');
-                        $(this).siblings('.option-label').find('.uncheck-icon').removeClass('mdi-radiobox-blank text-muted').addClass('mdi-radiobox-marked text-primary');
+                } else if (safeType === "Checkbox") {
+                    $.each(q.options, function(i, opt) {
+                        html += `
+                            <div class="mb-3">
+                                <input type="checkbox" class="option-input" name="q_${q.id}" id="opt_${opt.id}" value="${opt.id}">
+                                <label class="option-label" for="opt_${opt.id}">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3" style="width:24px;height:24px;border:2px solid #b66dff;border-radius:4px;display:flex;align-items:center;justify-content:center;"><i class="mdi mdi-check text-white" style="font-size:16px;"></i></div>
+                                        ${opt.optionText}
+                                    </div>
+                                </label>
+                            </div>
+                        `;
                     });
+                }
 
-                    $(".form-check-input[type='checkbox']").change(function() {
-                        var icon = $(this).siblings('.option-label').find('.uncheck-icon');
-                        if(this.checked) icon.removeClass('mdi-checkbox-blank-outline text-muted').addClass('mdi-checkbox-marked text-primary');
-                        else icon.removeClass('mdi-checkbox-marked text-primary').addClass('mdi-checkbox-blank-outline text-muted');
-                    });
+                html += `</div>`;
+                html += `<div class="inline-error"><i class="mdi mdi-alert-circle"></i> Lütfen bu soruyu cevaplayın.</div>`;
+                html += `</div>`;
 
-                    // İlk adımı göster
-                    showStep(1);
-                },
-                error: function (xhr) {
-                    $("#questionsContainer").html('<div class="alert alert-danger text-center shadow-sm">Sorular yüklenirken bir hata oluştu!</div>');
+                container.append(html);
+            });
+        }
+
+        function checkDraftAndStart() {
+            var draft = localStorage.getItem(draftKey);
+            if (draft) {
+                Swal.fire({
+                    title: 'Yarım Kalan Anket!',
+                    text: "Bu anket için daha önce verdiğin cevaplar var. Kaldığın yerden devam etmek ister misin?",
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonColor: '#b66dff',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Evet, devam et',
+                    cancelButtonText: 'Hayır, baştan başla'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        answers = JSON.parse(draft);
+                        restoreAnswers();
+                    } else {
+                        localStorage.removeItem(draftKey);
+                    }
+                    showStep(0);
+                });
+            } else {
+                showStep(0);
+            }
+        }
+
+        function saveDraft() {
+            extractCurrentAnswers();
+            localStorage.setItem(draftKey, JSON.stringify(answers));
+        }
+
+        function restoreAnswers() {
+            $.each(answers, function(qId, val) {
+                var inputName = `q_${qId}`;
+                var inputEle = $(`[name='${inputName}']`);
+
+                if(inputEle.attr('type') === 'radio') {
+                    $(`input[name='${inputName}'][value='${val}']`).prop('checked', true);
+                } else if(inputEle.attr('type') === 'checkbox') {
+                    $.each(val, function(i, v) { $(`input[name='${inputName}'][value='${v}']`).prop('checked', true); });
+                } else {
+                    inputEle.val(val);
                 }
             });
         }
 
-        function showStep(stepNum) {
-            $(".step-container").removeClass("active");
-            $(`#step-${stepNum}`).addClass("active");
+        function extractCurrentAnswers() {
+            var currentQ = questionsData[currentStep];
+            var inputName = `q_${currentQ.id}`;
+            var type = getQType(currentQ);
 
-            $("#btnPrev").css("visibility", stepNum === 1 ? "hidden" : "visible");
-
-            if (stepNum === totalQuestions) {
-                $("#btnNext").addClass("d-none");
-                $("#btnSubmitSurvey").removeClass("d-none");
+            if (type === "Radio") {
+                var val = $(`input[name='${inputName}']:checked`).val();
+                if(val) answers[currentQ.id] = val;
+            } else if (type === "Checkbox") {
+                var vals = [];
+                $(`input[name='${inputName}']:checked`).each(function() { vals.push($(this).val()); });
+                if(vals.length > 0) answers[currentQ.id] = vals; else delete answers[currentQ.id];
             } else {
-                $("#btnNext").removeClass("d-none");
-                $("#btnSubmitSurvey").addClass("d-none");
+                var txt = $(`[name='${inputName}']`).val().trim();
+                if(txt) answers[currentQ.id] = txt; else delete answers[currentQ.id];
             }
-
-            var percent = Math.round(((stepNum - 1) / totalQuestions) * 100);
-            if (stepNum === totalQuestions) percent = 100; // Son soruda %100 dolsun
-
-            $("#progressText").text(`Soru ${stepNum} / ${totalQuestions}`);
-            $("#progressPercent").text(`%${percent} Tamamlandı`);
-            $("#surveyProgress").css("width", percent + "%").attr("aria-valuenow", percent);
         }
 
-        function validateCurrentStep() {
-            var currentCard = $(`#step-${currentStep}`);
-            var isRequired = currentCard.data("required");
-            var qType = currentCard.data("type");
-            var isValid = true;
+        function showStep(index) {
+            $(".question-step").removeClass("active");
+            $(`#step_${index}`).addClass("active");
+            currentStep = index;
 
-            if (isRequired) {
-                if (qType === 0) { // Metin
-                    var textVal = currentCard.find("textarea").val().trim();
-                    if (textVal === "") isValid = false;
-                } else { // Seçmeli
-                    if (currentCard.find("input:checked").length === 0) isValid = false;
-                }
+            updateProgress();
+
+            if (index === 0) { $("#btnPrev").hide(); } else { $("#btnPrev").fadeIn(); }
+
+            if (index === questionsData.length - 1) {
+                $("#btnNext").hide();
+                $("#btnSubmit").fadeIn();
+            } else {
+                $("#btnNext").fadeIn();
+                $("#btnSubmit").hide();
             }
+        }
+
+        function nextStep() {
+            if (validateStep()) {
+                extractCurrentAnswers();
+                saveDraft();
+                showStep(currentStep + 1);
+            }
+        }
+
+        function prevStep() {
+            extractCurrentAnswers();
+            saveDraft();
+            showStep(currentStep - 1);
+        }
+
+        function validateStep() {
+            var stepDiv = $(`#step_${currentStep}`);
+            var isRequired = stepDiv.attr("data-req") === "true";
+
+            if (!isRequired) return true;
+
+            var currentQ = questionsData[currentStep];
+            var inputName = `q_${currentQ.id}`;
+            var type = getQType(currentQ);
+            var isValid = false;
+
+            if (type === "Radio" && $(`input[name='${inputName}']:checked`).length > 0) isValid = true;
+            if (type === "Checkbox" && $(`input[name='${inputName}']:checked`).length > 0) isValid = true;
+            if (type === "Text" && $(`[name='${inputName}']`).val().trim() !== "") isValid = true;
 
             if (!isValid) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Boş Geçilemez!',
-                    text: 'Lütfen bu soruyu yanıtlamadan ilerlemeyin.',
-                    confirmButtonColor: '#b66dff'
-                });
+                stepDiv.removeClass("shake-error");
+                void stepDiv[0].offsetWidth;
+                stepDiv.addClass("shake-error");
+                stepDiv.find(".inline-error").slideDown();
+
+                showErrorToast("Lütfen bu soruyu boş bırakmayın!");
+                return false;
             }
-            return isValid;
+
+            return true;
         }
 
-        function submitSurveyAnswers() {
-            var answers = [];
+        function updateProgress() {
+            var total = questionsData.length;
+            var percent = Math.round((currentStep / total) * 100);
 
-            $(".step-container").each(function () {
-                var step = $(this);
-                var qId = parseInt(step.data("qid"));
-                var qType = step.data("type");
+            $("#stepText").text(`Soru ${currentStep + 1} / ${total}`);
+            $("#progressText").text(`%${percent} Tamamlandı`);
+            $("#progressBar").css("width", percent + "%");
+        }
 
-                if (qType === 0) { // Metin
-                    var textVal = step.find("textarea").val().trim();
-                    if (textVal !== "") {
-                        answers.push({ questionId: qId, textAnswer: textVal, optionId: null });
-                    }
-                } else { // Seçmeli
-                    step.find("input:checked").each(function () {
-                        answers.push({
-                            questionId: qId,
-                            optionId: parseInt($(this).val()),
-                            textAnswer: null
-                        });
-                    });
+        function submitSurvey() {
+            if (!validateStep()) return;
+            extractCurrentAnswers();
+
+            var token = localStorage.getItem("token");
+            var btn = $("#btnSubmit");
+            btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Gönderiliyor...');
+
+            var payload = {
+                surveyId: parseInt(surveyId),
+                answers: []
+            };
+
+            $.each(answers, function(qId, val) {
+                if (Array.isArray(val)) {
+                    $.each(val, function(i, v) { payload.answers.push({ questionId: parseInt(qId), selectedOptionId: parseInt(v), answerText: "" }); });
+                } else if ($.isNumeric(val)) {
+                    payload.answers.push({ questionId: parseInt(qId), selectedOptionId: parseInt(val), answerText: "" });
+                } else {
+                    payload.answers.push({ questionId: parseInt(qId), selectedOptionId: null, answerText: val });
                 }
             });
 
-            var btn = $("#btnSubmitSurvey");
-            btn.prop("disabled", true).html('<i class="mdi mdi-loading mdi-spin"></i> Gönderiliyor...');
-
-            var token = localStorage.getItem("token");
-
             $.ajax({
-                url: "https://localhost:7283/api/answer/submit/" + currentSurveyId,
+                url: "https://localhost:7283/api/survey/submit",
                 type: "POST",
                 contentType: "application/json",
                 headers: { "Authorization": "Bearer " + token },
-                data: JSON.stringify(answers),
+                data: JSON.stringify(payload),
                 success: function (res) {
-                    window.location.href = '/Home/ThankYou';
+                    localStorage.removeItem(draftKey);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Harika!',
+                        text: 'Anket başarıyla gönderildi. Katılımınız için teşekkürler.',
+                        confirmButtonColor: '#b66dff'
+                    }).then(() => {
+                        window.location.href = "/Home/Index";
+                    });
                 },
                 error: function (xhr) {
-                    btn.prop("disabled", false).html('<i class="mdi mdi-send"></i> Yanıtları Gönder');
-                    var errorMsg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Yanıtlar gönderilirken bir sorun oluştu.';
-                    Swal.fire('Hata!', errorMsg, 'error');
+                    btn.prop('disabled', false).html('<i class="mdi mdi-check-circle me-1"></i> Anketi Tamamla');
+                    showErrorToast("Gönderim sırasında hata oluştu.");
                 }
             });
         }

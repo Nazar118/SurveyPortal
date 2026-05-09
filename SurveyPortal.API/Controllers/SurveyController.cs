@@ -134,8 +134,8 @@ namespace SurveyPortal.API.Controllers
                 ParticipantCount = context.Set<SurveyResponse>().Count(r => r.SurveyId == s.Id),
                 IsParticipated = userId != null && context.Set<SurveyResponse>().Any(r => r.SurveyId == s.Id && r.AppUserId == userId),
 
-                EstimatedTime = Math.Max(1, s.Questions.Count(q => !q.IsDeleted) / 2), // Her 2 soru 1 dk
-                CompletionRate = 75 + (s.Id % 20) // 75 ile 95 arası dinamik ama sabit bir sayı üretir
+                EstimatedTime = Math.Max(1, s.Questions.Count(q => !q.IsDeleted) / 2),
+                CompletionRate = 75 + (s.Id % 20)
             });
 
             if (sortBy == "popular")
@@ -148,6 +148,7 @@ namespace SurveyPortal.API.Controllers
             var result = await projectedQuery.ToListAsync();
             return Ok(result);
         }
+
         [HttpGet("{id}/detail")]
         public async Task<IActionResult> GetSurveyDetailForSolve(int id, [FromServices] AppDbContext context)
         {
@@ -168,7 +169,7 @@ namespace SurveyPortal.API.Controllers
                 {
                     q.Id,
                     q.QuestionText,
-                    q.QuestionType, 
+                    q.QuestionType,
                     q.IsRequired,
                     Options = q.Options.Select(o => new
                     {
@@ -177,15 +178,15 @@ namespace SurveyPortal.API.Controllers
                     }).ToList()
                 }).ToList()
             };
-             
+
             return Ok(result);
         }
+
         [HttpGet("trending")]
         public async Task<IActionResult> GetTrendingSurvey([FromServices] AppDbContext context)
         {
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-            // 1. En çok yanıt alan anketi bul
             var trendingSurveyId = await context.Set<SurveyResponse>()
                 .GroupBy(r => r.SurveyId)
                 .OrderByDescending(g => g.Count())
@@ -194,7 +195,6 @@ namespace SurveyPortal.API.Controllers
 
             if (trendingSurveyId == 0) return NotFound("Popüler anket bulunamadı.");
 
-            // 2. Anket detaylarını getir
             var survey = await context.Surveys
                 .Include(s => s.Category)
                 .Include(s => s.Questions.Where(q => !q.IsDeleted))
@@ -202,11 +202,9 @@ namespace SurveyPortal.API.Controllers
 
             if (survey == null) return NotFound();
 
-            // 3. İstatistikleri hesapla
             var participantCount = await context.Set<SurveyResponse>().CountAsync(r => r.SurveyId == survey.Id);
             var isParticipated = userId != null && await context.Set<SurveyResponse>().AnyAsync(r => r.SurveyId == survey.Id && r.AppUserId == userId);
 
-            // Tahmini Süre: Ortalama her 2 soru 1 dakika sürer varsayımı
             var estimatedTime = Math.Max(1, survey.Questions.Count / 2);
 
             return Ok(new
@@ -217,77 +215,236 @@ namespace SurveyPortal.API.Controllers
                 CategoryName = survey.Category != null ? survey.Category.Name : "Genel",
                 ParticipantCount = participantCount,
                 EstimatedTime = estimatedTime,
-                CompletionRate = 89, // Şimdilik modern bir hava katması için yüksek bir "mock" değer gönderiyoruz
+                CompletionRate = 89,
                 IsParticipated = isParticipated
             });
         }
+
         [Authorize]
         [HttpGet("recommendation")]
         public async Task<IActionResult> GetRecommendations([FromServices] AppDbContext context)
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (string.IsNullOrEmpty(userId)) return Ok(new List<object>());
-
-            // 1. Kullanıcının daha önce çözdüğü anketlerin ve kategorilerin ID'lerini al
-            var solvedSurveyIds = await context.Set<SurveyResponse>()
-                .Where(r => r.AppUserId == userId)
-                .Select(r => r.SurveyId)
-                .ToListAsync();
-
-            var solvedCategoryIds = await context.Set<SurveyResponse>()
-                .Where(r => r.AppUserId == userId)
-                .Select(r => r.Survey.CategoryId)
-                .Distinct()
-                .ToListAsync();
-
-            // 2. Aktif ve ÇÖZÜLMEMİŞ anketleri veritabanından GÜVENLİ bir şekilde çek
-            var rawSurveys = await context.Surveys
-                .Include(s => s.Category)
-                .Include(s => s.Questions)
-                .Where(s => !s.IsDeleted && s.Status == "Active" && (s.EndDate == null || s.EndDate > DateTime.Now))
-                .Where(s => !solvedSurveyIds.Contains(s.Id))
-                .ToListAsync();
-
-            // 3. Algoritma: Çözdüğü kategorilere uyanları öner, yoksa yenileri öner (RAM'de çalışır, hata vermez)
-            IEnumerable<Models.Survey> recommendedSurveys;
-            if (solvedCategoryIds.Any())
+            try
             {
-                recommendedSurveys = rawSurveys
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId)) return Ok(new List<object>());
+
+                var solvedSurveyIds = await context.Set<SurveyResponse>()
+                    .Where(r => r.AppUserId == userId)
+                    .Select(r => r.SurveyId)
+                    .Distinct()
+                    .ToListAsync();
+
+                var solvedCategoryIds = await context.Surveys
+                    .Where(s => solvedSurveyIds.Contains(s.Id))
+                    .Select(s => s.CategoryId)
+                    .Distinct()
+                    .ToListAsync();
+
+                var availableSurveys = await context.Surveys
+                    .Include(s => s.Category)
+                    .Include(s => s.Questions.Where(q => !q.IsDeleted))
+                    .Where(s => !s.IsDeleted && s.Status == "Active" && (s.EndDate == null || s.EndDate > DateTime.Now))
+                    .Where(s => !solvedSurveyIds.Contains(s.Id))
+                    .ToListAsync();
+
+                var surveyIds = availableSurveys.Select(s => s.Id).ToList();
+                var participantCounts = await context.Set<SurveyResponse>()
+                    .Where(r => surveyIds.Contains(r.SurveyId))
+                    .GroupBy(r => r.SurveyId)
+                    .Select(g => new { SurveyId = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.SurveyId, x => x.Count);
+
+                var recommendedSurveys = availableSurveys
                     .Where(s => solvedCategoryIds.Contains(s.CategoryId))
                     .OrderByDescending(s => s.CreatedDate)
-                    .Take(4);
-            }
-            else
-            {
-                recommendedSurveys = rawSurveys
-                    .OrderByDescending(s => s.CreatedDate)
-                    .Take(4);
-            }
+                    .Take(4)
+                    .ToList();
 
-            // 4. Verileri paketle
-            var result = new List<object>();
-            foreach (var s in recommendedSurveys)
-            {
-                var pCount = await context.Set<SurveyResponse>().CountAsync(r => r.SurveyId == s.Id);
-                var qCount = s.Questions != null ? s.Questions.Count(q => !q.IsDeleted) : 0;
-                var estimatedTime = (qCount / 2) < 1 ? 1 : (qCount / 2);
-
-                result.Add(new
+                if (!recommendedSurveys.Any())
                 {
+                    recommendedSurveys = availableSurveys.OrderByDescending(s => s.CreatedDate).Take(4).ToList();
+                }
+
+                var result = recommendedSurveys.Select(s => new {
                     Id = s.Id,
                     Title = s.Title,
                     Description = s.Description,
-                    CreatedDate = s.CreatedDate,
-                    EndDate = s.EndDate,
                     CategoryName = s.Category?.Name ?? "Genel",
-                    ParticipantCount = pCount,
-                    IsParticipated = false,
-                    EstimatedTime = estimatedTime,
+                    ParticipantCount = participantCounts.ContainsKey(s.Id) ? participantCounts[s.Id] : 0,
+                    EstimatedTime = Math.Max(1, s.Questions.Count / 2),
                     CompletionRate = 75 + (s.Id % 20)
-                });
+                }).ToList();
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "API Hatası: " + ex.Message);
+            }
+        }
+
+        // 🔥 AŞAMA 3: ANKET CEVAPLARINI VERİTABANINA KAYDEDEN METOT
+        [Authorize]
+        [HttpPost("submit")]
+        public async Task<IActionResult> SubmitSurvey([FromBody] SurveySubmitRequest request, [FromServices] AppDbContext context)
+        {
+            try
+            {
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId)) return Unauthorized("Oturum süreniz dolmuş.");
+
+                var alreadySolved = await context.Set<SurveyResponse>().AnyAsync(r => r.SurveyId == request.SurveyId && r.AppUserId == userId);
+                if (alreadySolved) return BadRequest("Bu anketi zaten çözdünüz.");
+
+                var response = new SurveyResponse
+                {
+                    SurveyId = request.SurveyId,
+                    AppUserId = userId,
+                    StartedAt = DateTime.Now,
+                    CompletedAt = DateTime.Now,
+                    IsCompleted = true
+                };
+
+                context.Set<SurveyResponse>().Add(response);
+                await context.SaveChangesAsync();
+
+                foreach (var ans in request.Answers)
+                {
+                    var newAnswer = new Answer
+                    {
+                        SurveyResponseId = response.Id,
+                        QuestionId = ans.QuestionId,
+                        OptionId = ans.SelectedOptionId,
+                        TextAnswer = ans.AnswerText
+                    };
+                    context.Set<Answer>().Add(newAnswer);
+                }
+
+                await context.SaveChangesAsync();
+
+                return Ok(new { Message = "Anket başarıyla kaydedildi!" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Kayıt sırasında bir hata oluştu: " + ex.Message);
+            }
+        }
+
+        // 🔥 AŞAMA 4: GELİŞMİŞ SONUÇ VE İÇGÖRÜ (INSIGHT) HESAPLAMA SİSTEMİ
+        [HttpGet("{id}/results")]
+        public async Task<IActionResult> GetSurveyResults(int id, [FromServices] AppDbContext context)
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            var survey = await context.Surveys
+                .Include(s => s.Questions.Where(q => !q.IsDeleted))
+                    .ThenInclude(q => q.Options.Where(o => !o.IsDeleted))
+                .FirstOrDefaultAsync(s => s.Id == id && !s.IsDeleted);
+
+            if (survey == null) return NotFound("Anket bulunamadı.");
+
+            var totalParticipants = await context.Set<SurveyResponse>().CountAsync(r => r.SurveyId == id);
+
+            var allAnswers = await context.Set<Answer>()
+                .Include(a => a.SurveyResponse)
+                .Where(a => a.SurveyResponse.SurveyId == id)
+                .ToListAsync();
+
+            var resultDto = new
+            {
+                SurveyId = survey.Id,
+                Title = survey.Title,
+                Description = survey.Description,
+                TotalParticipants = totalParticipants,
+                Insights = new List<string>(),
+                Questions = new List<object>()
+            };
+
+            foreach (var q in survey.Questions)
+            {
+                var qAnswers = allAnswers.Where(a => a.QuestionId == q.Id).ToList();
+                var totalQAnswers = qAnswers.Count;
+
+                // Akıllı Soru Tipi Algılayıcı (Crash Önleyici)
+                string safeType = "Radio";
+                if (q.Options == null || !q.Options.Any()) safeType = "Text";
+                else if (q.QuestionType != null && (q.QuestionType.ToString().ToLower().Contains("check") || q.QuestionType.ToString().ToLower().Contains("çoklu") || q.QuestionType.ToString() == "2")) safeType = "Checkbox";
+
+                if (safeType != "Text")
+                {
+                    var optionsStats = new List<object>();
+                    int maxCount = 0;
+
+                    foreach (var opt in q.Options)
+                    {
+                        var optCount = qAnswers.Count(a => a.OptionId == opt.Id);
+                        if (optCount > maxCount) maxCount = optCount;
+                    }
+
+                    foreach (var opt in q.Options)
+                    {
+                        var optCount = qAnswers.Count(a => a.OptionId == opt.Id);
+                        var percentage = totalQAnswers > 0 ? (int)Math.Round((double)optCount / totalQAnswers * 100) : 0;
+                        var isUserChoice = userId != null && qAnswers.Any(a => a.OptionId == opt.Id && a.SurveyResponse.AppUserId == userId);
+
+                        optionsStats.Add(new
+                        {
+                            OptionId = opt.Id,
+                            OptionText = opt.OptionText,
+                            Count = optCount,
+                            Percentage = percentage,
+                            IsWinner = optCount > 0 && optCount == maxCount,
+                            IsUserChoice = isUserChoice
+                        });
+                    }
+
+                    resultDto.Questions.Add(new
+                    {
+                        QuestionId = q.Id,
+                        QuestionText = q.QuestionText,
+                        QuestionType = safeType,
+                        Options = optionsStats
+                    });
+
+                    // INSIGHT ÜRETİMİ
+                    if (maxCount > 0 && totalQAnswers > 0)
+                    {
+                        var topPercent = (int)Math.Round((double)maxCount / totalQAnswers * 100);
+                        if (topPercent > 50)
+                        {
+                            var topOption = q.Options.First(o => qAnswers.Count(a => a.OptionId == o.Id) == maxCount);
+                            resultDto.Insights.Add($"Katılımcıların <strong>%{topPercent}'i</strong>, '{q.QuestionText}' konusunda <strong>{topOption.OptionText}</strong> tercihini yaptı.");
+                        }
+                    }
+                }
+                else
+                {
+                    var textAnswers = qAnswers.Where(a => !string.IsNullOrWhiteSpace(a.TextAnswer)).Select(a => a.TextAnswer).ToList();
+                    resultDto.Questions.Add(new
+                    {
+                        QuestionId = q.Id,
+                        QuestionText = q.QuestionText,
+                        QuestionType = "Text",
+                        TextAnswers = textAnswers
+                    });
+                }
             }
 
-            return Ok(result);
+            return Ok(resultDto);
         }
-    } 
+    }
+
+    public class SurveySubmitRequest
+    {
+        public int SurveyId { get; set; }
+        public List<AnswerSubmitDto> Answers { get; set; } = new List<AnswerSubmitDto>();
+    }
+
+    public class AnswerSubmitDto
+    {
+        public int QuestionId { get; set; }
+        public int? SelectedOptionId { get; set; }
+        public string? AnswerText { get; set; }
+    }
 }
