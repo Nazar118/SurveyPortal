@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SurveyPortal.API.Data;
 using SurveyPortal.API.DTOs;
 using SurveyPortal.API.Models;
 using SurveyPortal.API.Repositories.Interfaces;
@@ -41,6 +42,24 @@ namespace SurveyPortal.API.Controllers
         {
             var newQuestion = await _questionService.CreateQuestionAsync(questionDto);
             return Ok(newQuestion);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetQuestionById(int id, [FromServices] AppDbContext context)
+        {
+            var question = await context.Questions.FindAsync(id);
+
+            if (question == null)
+                return NotFound("Soru bulunamadı.");
+
+            return Ok(new
+            {
+                id = question.Id,
+                questionText = question.QuestionText,
+                questionType = question.QuestionType,
+                isRequired = question.IsRequired,
+                surveyId = question.SurveyId
+            });
         }
 
         [Authorize(Roles = "Admin")]

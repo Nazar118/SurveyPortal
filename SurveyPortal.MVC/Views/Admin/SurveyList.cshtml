@@ -17,9 +17,14 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h4 class="card-title m-0">Kayıtlı Anketler</h4>
-                    <button class="btn btn-gradient-success btn-sm font-weight-bold" data-bs-toggle="modal" data-bs-target="#addSurveyModal">
-                        <i class="mdi mdi-plus"></i> Yeni Anket Ekle
-                    </button>
+                    <div>
+                        <button class="btn btn-gradient-info btn-sm font-weight-bold me-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#aiSurveyModal">
+                            <i class="mdi mdi-auto-fix"></i> AI ile Üret
+                        </button>
+                        <button class="btn btn-gradient-success btn-sm font-weight-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#addSurveyModal">
+                            <i class="mdi mdi-plus"></i> Yeni Anket Ekle
+                        </button>
+                    </div>
                 </div>
 
                 <div class="table-responsive">
@@ -49,7 +54,46 @@
     </div>
 </div>
 
-<!-- YENİ ANKET EKLEME MODALI -->
+<div class="modal fade" id="aiSurveyModal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-gradient-info text-white">
+                <h5 class="modal-title"><i class="mdi mdi-creation"></i> Yapay Zeka ile Anket Üret</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="alert alert-info bg-opacity-10 border-info mb-4">
+                    <i class="mdi mdi-information-outline me-1"></i> Sadece konuyu girin. Yapay zeka asistanımız soruları ve mantıklı şıkları sizin için otomatik hazırlayacaktır.
+                </div>
+                <form id="aiSurveyForm">
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold">Ne Hakkında Anket İstiyorsunuz? <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control form-control-lg border-info" id="aiSurveyTopic" placeholder="Örn: Yapay Zekanın Yazılımcılara Etkisi" required>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 form-group mb-3">
+                            <label class="font-weight-bold">Soru Sayısı</label>
+                            <input type="number" class="form-control form-control-lg" id="aiQuestionCount" value="5" min="2" max="10">
+                        </div>
+                        <div class="col-md-6 form-group mb-3">
+                            <label class="font-weight-bold">Kategori <span class="text-danger">*</span></label>
+                            <select class="form-control form-control-lg" id="aiCategoryId" required>
+                                <option value="">Yükleniyor...</option>
+                            </select>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-gradient-info font-weight-bold px-4" id="btnGenerateAI">
+                    <i class="mdi mdi-auto-fix me-1"></i> Üret ve Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="addSurveyModal" role="dialog" aria-labelledby="addSurveyModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -83,7 +127,6 @@
                         <label for="surveyEndDate" class="font-weight-bold">Bitiş Tarihi <small class="text-muted">(İsteğe Bağlı)</small></label>
                         <input type="date" class="form-control form-control-lg" id="surveyEndDate">
                     </div>
-                    <!-- 🔥 Yeni Eklenen anket her zaman DRAFT olacağı için Checkbox kaldırıldı -->
                 </form>
             </div>
             <div class="modal-footer">
@@ -94,7 +137,6 @@
     </div>
 </div>
 
-<!-- DÜZENLEME MODALI -->
 <div class="modal fade" id="editSurveyModal" role="dialog" aria-labelledby="editSurveyModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
@@ -123,7 +165,6 @@
                         <label for="editSurveyEndDate" class="font-weight-bold">Bitiş Tarihi <small class="text-muted">(İsteğe Bağlı)</small></label>
                         <input type="date" class="form-control form-control-lg" id="editSurveyEndDate">
                     </div>
-                    <!-- 🔥 YENİ: Checkbox yerine STATÜ Seçimi -->
                     <div class="form-group mb-3">
                         <label for="editSurveyStatus" class="font-weight-bold">Anket Durumu</label>
                         <select class="form-control form-control-lg" id="editSurveyStatus" required>
@@ -150,24 +191,27 @@
         });
 
         function loadCategories() {
-            $.ajax({
-                url: "https://localhost:7283/api/category",
-                type: "GET",
-                success: function (categories) {
-                    var dropdownAdd = $("#categoryId");
-                    var dropdownEdit = $("#editCategoryId");
+             $.ajax({
+                 url: "https://localhost:7283/api/category",
+                 type: "GET",
+                 success: function (categories) {
+                     var dropdownAdd = $("#categoryId");
+                     var dropdownEdit = $("#editCategoryId");
+                     var dropdownAI = $("#aiCategoryId"); // 🔥 AI için eklendi
 
-                    dropdownAdd.empty().append('<option value="">Lütfen Bir Kategori Seçin</option>');
-                    dropdownEdit.empty().append('<option value="">Lütfen Bir Kategori Seçin</option>');
+                     dropdownAdd.empty().append('<option value="">Lütfen Bir Kategori Seçin</option>');
+                     dropdownEdit.empty().append('<option value="">Lütfen Bir Kategori Seçin</option>');
+                     dropdownAI.empty().append('<option value="">Lütfen Bir Kategori Seçin</option>'); // 🔥 AI için eklendi
 
-                    $.each(categories, function (index, category) {
-                        var option = '<option value="' + category.id + '">' + category.name + '</option>';
-                        dropdownAdd.append(option);
-                        dropdownEdit.append(option);
-                    });
-                }
-            });
-        }
+                     $.each(categories, function (index, category) {
+                         var option = '<option value="' + category.id + '">' + category.name + '</option>';
+                         dropdownAdd.append(option);
+                         dropdownEdit.append(option);
+                         dropdownAI.append(option); // 🔥 AI için eklendi
+                     });
+                 }
+             });
+         }
 
         function loadSurveys() {
             $.ajax({
@@ -242,7 +286,7 @@
                         url: "https://localhost:7283/api/survey/" + id,
                         type: "DELETE",
                         success: function () {
-                            showSuccessToast('Anket başarıyla silindi.'); // 🔥 TOAST
+                            showSuccessToast('Anket başarıyla silindi.');
                             loadSurveys();
                         }
                     });
@@ -257,7 +301,7 @@
             var endDateInput = $("#surveyEndDate").val();
 
             if (!titleInput || !categoryIdInput) {
-                showErrorToast('Lütfen Başlık ve Kategori alanlarını doldurunuz!'); // 🔥 TOAST
+                showErrorToast('Lütfen Başlık ve Kategori alanlarını doldurunuz!');
                 return;
             }
 
@@ -278,7 +322,7 @@
                 success: function () {
                     $("#addSurveyModal").modal('hide');
                     $("#addSurveyForm")[0].reset();
-                    showSuccessToast('Anket başarıyla oluşturuldu.'); // 🔥 TOAST
+                    showSuccessToast('Anket başarıyla oluşturuldu.');
                     loadSurveys();
                 }
             });
@@ -295,7 +339,7 @@
                         url: "https://localhost:7283/api/category", type: "POST", contentType: "application/json",
                         data: JSON.stringify({ name: result.value }),
                         success: function () {
-                            showSuccessToast('Kategori eklendi.'); // 🔥 TOAST
+                            showSuccessToast('Kategori eklendi.');
                             loadCategories();
                         }
                     });
@@ -334,7 +378,7 @@
 
         $("#btnUpdateSurvey").click(function () {
             if (!$("#editSurveyTitle").val() || !$("#editCategoryId").val()) {
-                showErrorToast('Başlık ve Kategori boş bırakılamaz!'); // 🔥 TOAST
+                showErrorToast('Başlık ve Kategori boş bırakılamaz!');
                 return;
             }
 
@@ -358,14 +402,15 @@
                 data: JSON.stringify(updateData),
                 success: function () {
                     $("#editSurveyModal").modal('hide');
-                    showSuccessToast('Anket başarıyla güncellendi.'); // 🔥 TOAST
+                    showSuccessToast('Anket başarıyla güncellendi.');
                     loadSurveys();
                 },
                 error: function () {
-                    showErrorToast('Güncelleme sırasında bir sorun oluştu.'); // 🔥 TOAST
+                    showErrorToast('Güncelleme sırasında bir sorun oluştu.');
                 }
             });
         });
+
         function cloneSurvey(id) {
             Swal.fire({
                 title: 'Anketi Kopyala',
@@ -383,16 +428,62 @@
                         type: "POST",
                         success: function () {
                             Swal.close();
-                            showSuccessToast('Anket başarıyla kopyalandı.'); // 🔥 TOAST
+                            showSuccessToast('Anket başarıyla kopyalandı.');
                             loadSurveys();
                         },
                         error: function () {
                             Swal.close();
-                            showErrorToast('Kopyalama başarısız oldu.'); // 🔥 TOAST
+                            showErrorToast('Kopyalama başarısız oldu.');
                         }
                     });
                 }
             });
         }
+
+        // 🔥 AI ÜRETİM BUTONU TETİKLEYİCİSİ
+        $("#btnGenerateAI").click(function () {
+            var topic = $("#aiSurveyTopic").val();
+            var count = $("#aiQuestionCount").val();
+            var categoryId = $("#aiCategoryId").val();
+
+            if (!topic || !categoryId) {
+                showErrorToast('Lütfen Konu ve Kategori alanlarını doldurunuz!');
+                return;
+            }
+
+            var btn = $(this);
+            btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Yapay Zeka Düşünüyor...');
+
+            var aiData = {
+                topic: topic,
+                questionCount: parseInt(count),
+                categoryId: parseInt(categoryId)
+            };
+
+            $.ajax({
+                url: "https://localhost:7283/api/survey/generate-ai", // 🔥 Bu API ucunu bir sonraki adımda yazacağız!
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(aiData),
+                success: function () {
+                    $("#aiSurveyModal").modal('hide');
+                    $("#aiSurveyForm")[0].reset();
+                    btn.prop('disabled', false).html('<i class="mdi mdi-auto-fix me-1"></i> Üret ve Kaydet');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Sihir Gerçekleşti!',
+                        text: 'Yapay zeka anketinizi ve şıklarını başarıyla oluşturdu.',
+                        confirmButtonColor: '#1bcfb4'
+                    });
+
+                    loadSurveys();
+                },
+                error: function (xhr) {
+                    btn.prop('disabled', false).html('<i class="mdi mdi-auto-fix me-1"></i> Üret ve Kaydet');
+                    showErrorToast(xhr.responseText || 'Yapay Zeka ile iletişim kurulamadı.');
+                }
+            });
+        });
     </script>
 }

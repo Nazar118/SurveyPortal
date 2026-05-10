@@ -50,8 +50,7 @@
     </div>
 </div>
 
-<!-- YENİ SORU EKLEME MODALI (DİNAMİK YAPI) -->
-<div class="modal fade" id="addQuestionModal" tabindex="-1" role="dialog" aria-labelledby="addQuestionModalLabel" aria-hidden="true">
+<div class="modal fade" id="addQuestionModal" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header bg-gradient-info text-white">
@@ -91,13 +90,11 @@
                         </div>
                     </div>
 
-                    <!-- 🔥 ŞIK EKLEME BÖLÜMÜ (Başlangıçta Gizli) -->
                     <div class="card shadow-sm border-0 border-start border-4 border-warning" id="dynamicOptionsSection" style="display: none;">
                         <div class="card-body">
                             <h6 class="font-weight-bold text-warning mb-3"><i class="mdi mdi-format-list-bulleted"></i> Şıklar (Seçenekler)</h6>
 
                             <ul class="list-group mb-3" id="liveOptionsList">
-                                <!-- Eklenen şıklar anında buraya düşecek -->
                             </ul>
 
                             <div class="input-group">
@@ -116,6 +113,43 @@
                 <button type="button" class="btn btn-gradient-info px-4" id="btnSaveQuestionAndOptions">
                     <i class="mdi mdi-content-save"></i> Soruyu Kaydet
                 </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editQuestionModal" role="dialog" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header bg-gradient-primary text-white">
+                <h5 class="modal-title">Soruyu Düzenle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editQuestionForm">
+                    <input type="hidden" id="editQuestionId">
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold">Soru Metni</label>
+                        <textarea class="form-control" id="editQuestionText" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="font-weight-bold">Soru Tipi</label>
+                        <select class="form-control" id="editQuestionType">
+                            <option value="0">Kısa Metin (Text)</option>
+                            <option value="1">Tek Seçim (Radio)</option>
+                            <option value="2">Çoklu Seçim (Checkbox)</option>
+                        </select>
+                    </div>
+                    <div class="form-check form-check-primary mb-3">
+                        <label class="form-check-label font-weight-bold">
+                            <input type="checkbox" class="form-check-input" id="editIsRequired"> Bu soru zorunlu olsun
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" id="btnUpdateQuestion" class="btn btn-gradient-primary">Değişiklikleri Kaydet</button>
             </div>
         </div>
     </div>
@@ -153,7 +187,7 @@
     <script>
         var currentSurveyId = parseInt($("#currentSurveyId").text());
         var pendingOptions = [];
-        var currentQuestionsList = []; 
+        var currentQuestionsList = [];
 
         $(document).ready(function () {
             loadQuestions();
@@ -237,7 +271,7 @@
                     }
 
                     data.sort((a, b) => a.orderNumber - b.orderNumber);
-                    currentQuestionsList = data; 
+                    currentQuestionsList = data;
 
                     $.each(data, function (index, q) {
                         var typeText = "Bilinmiyor";
@@ -257,6 +291,9 @@
 
                         var actionButtons = upBtn + downBtn;
 
+                        // 🔥 YENİ: DÜZENLE BUTONU EKLENDİ
+                        actionButtons += `<button onclick="openEditQuestionModal('${q.id}')" class="btn btn-sm btn-primary me-2 text-white" title="Soruyu Düzenle"><i class="mdi mdi-pencil"></i> Düzenle</button>`;
+
                         if (q.questionType === 1 || q.questionType === 2) {
                             actionButtons += `
                                 <button onclick="openOptionsModal('${q.id}')" class="btn btn-sm btn-warning me-2 text-dark font-weight-bold" title="Şıkları Yönet">
@@ -264,6 +301,7 @@
                                 </button>
                             `;
                         }
+
                         actionButtons += `<button onclick="deleteQuestion('${q.id}')" class="btn btn-sm btn-danger" title="Soruyu Sil"><i class="mdi mdi-delete"></i> Sil</button>`;
 
                         var row = `
@@ -283,6 +321,44 @@
                 }
             });
         }
+
+        // 🔥 YENİ: SORU DÜZENLEME FONKSİYONLARI
+        function openEditQuestionModal(id) {
+            $.ajax({
+                url: `https://localhost:7283/api/question/${id}`,
+                type: "GET",
+                success: function (q) {
+                    $("#editQuestionId").val(q.id);
+                    $("#editQuestionText").val(q.questionText);
+                    $("#editQuestionType").val(q.questionType);
+                    $("#editIsRequired").prop("checked", q.isRequired);
+                    $("#editQuestionModal").modal('show');
+                }
+            });
+        }
+
+        $("#btnUpdateQuestion").click(function () {
+            var id = $("#editQuestionId").val();
+            var updateData = {
+                id: parseInt(id),
+                questionText: $("#editQuestionText").val(),
+                questionType: parseInt($("#editQuestionType").val()),
+                isRequired: $("#editIsRequired").is(":checked"),
+                surveyId: parseInt(currentSurveyId)
+            };
+
+            $.ajax({
+                url: `https://localhost:7283/api/question/${id}`,
+                type: "PUT",
+                contentType: "application/json",
+                data: JSON.stringify(updateData),
+                success: function () {
+                    $("#editQuestionModal").modal('hide');
+                    showSuccessToast("Soru başarıyla güncellendi.");
+                    loadQuestions();
+                }
+            });
+        });
 
         function moveQuestion(index, direction) {
             var q1 = currentQuestionsList[index];

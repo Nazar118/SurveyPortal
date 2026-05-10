@@ -1,10 +1,10 @@
 ﻿@{
-    ViewData["Title"] = "Kullanıcı Paneli";
+    ViewData["Title"] = "Oyuncu ve Kullanıcı Paneli";
     Layout = "~/Views/Shared/_UserLayout.cshtml";
 }
 
 <style>
-    /* 🔥 PORTAL CSS (Mevcut tasarım aynen korundu) */
+    /* 🔥 PORTAL TEMEL CSS */
     .portal-sidebar {
         background: #fff;
         border-radius: 12px;
@@ -72,6 +72,51 @@
         min-height: 70vh;
     }
 
+    /* İSTATİSTİK VE ROZET KARTLARI */
+    .stat-card {
+        border-radius: 15px;
+        padding: 25px;
+        color: white;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: transform 0.3s;
+    }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+    .stat-bg-1 {
+        background: linear-gradient(135deg, #b66dff 0%, #7922e5 100%);
+    }
+
+    .stat-bg-2 {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .achievement-badge {
+        background: #f8f9fc;
+        border: 1px solid #ebedf2;
+        border-radius: 12px;
+        padding: 15px;
+        text-align: center;
+        transition: all 0.3s;
+    }
+
+        .achievement-badge:hover {
+            border-color: #b66dff;
+            box-shadow: 0 5px 15px rgba(182, 109, 255, 0.15);
+            transform: translateY(-3px);
+        }
+
+    .achievement-icon {
+        font-size: 2.5rem;
+        line-height: 1;
+        margin-bottom: 10px;
+    }
+
     .survey-list-item {
         transition: all 0.2s ease;
         border-left: 4px solid transparent;
@@ -82,37 +127,18 @@
             border-left-color: #b66dff;
         }
 
-    /* Yeni Form Input Tasarımı */
     .form-control:focus {
         border-color: #b66dff;
         box-shadow: 0 0 0 0.2rem rgba(182, 109, 255, 0.25);
     }
-    .skeleton-box {
-        background: #e2e5e7;
-        background-image: linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
-        background-size: 40px 100%;
-        background-repeat: no-repeat;
-        background-position: left -40px top 0;
-        animation: shimmer 1.5s infinite;
-        border-radius: 6px;
-    }
 
-    @@keyframes shimmer {
-        100% {
-            background-position: right -40px top 0;
-        }
-    }
-
-    body.dark-mode .skeleton-box {
-        background-color: #2c2c2c;
-    }
-
+    /* Animasyonlar */
     .fade-in-up {
         animation: fadeInUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
         opacity: 0;
         transform: translateY(20px);
     }
-    /* Kartların sırayla düşmesi için gecikme (delay) tanımları */
+
     .delay-1 {
         animation-delay: 0.1s;
     }
@@ -131,13 +157,27 @@
             transform: translateY(0);
         }
     }
+
+    /* Dark Mode */
+    body.dark-mode .portal-sidebar, body.dark-mode .portal-content {
+        background: #1e1e1e;
+        border-color: #333;
+    }
+
+    body.dark-mode .achievement-badge {
+        background: #252525;
+        border-color: #444;
+    }
+
+    body.dark-mode .nav-pills .nav-link:hover:not(.active) {
+        background-color: #2a2a2a;
+    }
 </style>
 
 <div class="container-fluid mt-4 mb-5" style="max-width: 1400px;">
     <div class="row g-4">
 
-        <!-- 🔥 SOL MENÜ -->
-        <div class="col-lg-3 col-md-4">
+        <div class="col-lg-3 col-md-4 fade-in-up delay-1">
             <div class="portal-sidebar p-4">
                 <div class="text-center mb-4 pb-4 border-bottom">
                     <div class="portal-avatar mb-3"><i class="mdi mdi-account"></i></div>
@@ -145,57 +185,73 @@
                     <span class="badge badge-outline-primary badge-pill px-3 py-1" id="sideRole">...</span>
                 </div>
 
-                <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
-                    <button class="nav-link active" id="v-pills-surveys-tab" data-bs-toggle="pill" data-bs-target="#v-pills-surveys" type="button" role="tab">
-                        <i class="mdi mdi-format-list-checks"></i> Katıldığım Anketler
+                <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist">
+                    <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#v-pills-dashboard" type="button" role="tab">
+                        <i class="mdi mdi-view-dashboard"></i> İstatistik & Etkinlik
                     </button>
-                    <button class="nav-link" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab">
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-bookmarks" type="button" role="tab">
+                        <i class="mdi mdi-star"></i> Favori Anketlerim
+                    </button>
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab">
                         <i class="mdi mdi-card-account-details-outline"></i> Hesap Bilgilerim
                     </button>
-                    <!-- 🔥 YENİ: Şifre Değiştir Sekmesi -->
-                    <button class="nav-link" id="v-pills-password-tab" data-bs-toggle="pill" data-bs-target="#v-pills-password" type="button" role="tab">
+                    <button class="nav-link" data-bs-toggle="pill" data-bs-target="#v-pills-password" type="button" role="tab">
                         <i class="mdi mdi-lock-reset"></i> Şifre Değiştir
                     </button>
 
-                    <hr class="my-3">
-                    <a href="/Home/Index" class="nav-link text-dark" style="background: transparent;"><i class="mdi mdi-compass-outline"></i> Yeni Anket Keşfet</a>
+                    <hr class="my-3 border-secondary">
+                    <a href="/Home/Index" class="nav-link text-dark" style="background: transparent;"><i class="mdi mdi-compass-outline"></i> Keşfetmeye Dön</a>
                     <button class="nav-link text-danger mt-2" onclick="logout()" style="background: transparent;"><i class="mdi mdi-logout text-danger"></i> Güvenli Çıkış</button>
                 </div>
             </div>
         </div>
 
-        <!-- 🔥 SAĞ İÇERİK ALANI -->
-        <div class="col-lg-9 col-md-8">
+        <div class="col-lg-9 col-md-8 fade-in-up delay-2">
             <div class="portal-content">
                 <div class="tab-content" id="v-pills-tabContent">
 
-                    <!-- TAB 1: ANKETLERİM -->
-                    <div class="tab-pane fade show active" id="v-pills-surveys" role="tabpanel">
-                        <div class="d-flex justify-content-between align-items-center mb-4 pb-2 border-bottom">
-                            <h3 class="font-weight-bold m-0"><i class="mdi mdi-check-network text-success me-2"></i> Anket Geçmişim</h3>
+                    <div class="tab-pane fade show active" id="v-pills-dashboard" role="tabpanel">
+
+                        <div class="row mb-5">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <div class="stat-card stat-bg-1">
+                                    <div>
+                                        <h3 class="font-weight-bold mb-0" id="statTotalSolved" style="font-size: 2.5rem;">0</h3>
+                                        <span style="font-size: 1.1rem; opacity: 0.9;">Tamamlanan Anket</span>
+                                    </div>
+                                    <i class="mdi mdi-check-decagram" style="font-size: 4rem; opacity: 0.5;"></i>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="stat-card stat-bg-2">
+                                    <div>
+                                        <h3 class="font-weight-bold mb-0" id="statCategories" style="font-size: 2.5rem;">0</h3>
+                                        <span style="font-size: 1.1rem; opacity: 0.9;">Keşfedilen Kategori</span>
+                                    </div>
+                                    <i class="mdi mdi-compass" style="font-size: 4rem; opacity: 0.5;"></i>
+                                </div>
+                            </div>
                         </div>
-                        <div id="mySurveysList">
-                            <div class="survey-list-item d-flex justify-content-between align-items-center py-4 px-3 border-bottom">
-                                <div style="width: 60%;">
-                                    <div class="skeleton-box mb-2" style="width: 80%; height: 20px;"></div>
-                                    <div class="skeleton-box" style="width: 40%; height: 14px;"></div>
-                                </div>
-                                <div class="skeleton-box" style="width: 120px; height: 35px; border-radius: 50px;"></div>
-                            </div>
-                            <div class="survey-list-item d-flex justify-content-between align-items-center py-4 px-3 border-bottom">
-                                <div style="width: 60%;">
-                                    <div class="skeleton-box mb-2" style="width: 60%; height: 20px;"></div>
-                                    <div class="skeleton-box" style="width: 30%; height: 14px;"></div>
-                                </div>
-                                <div class="skeleton-box" style="width: 120px; height: 35px; border-radius: 50px;"></div>
-                            </div>
+
+                        <h4 class="font-weight-bold mb-3"><i class="mdi mdi-trophy text-warning me-2"></i> Kazanılan Rozetler</h4>
+                        <div class="row mb-5" id="achievementsList">
+                            <div class="col-12 text-center text-muted"><div class="spinner-border spinner-border-sm text-primary"></div> Yükleniyor...</div>
+                        </div>
+
+                        <h4 class="font-weight-bold mb-3"><i class="mdi mdi-history text-primary me-2"></i> Son Etkinlikler</h4>
+                        <div id="mySurveysList" class="border rounded-xl overflow-hidden">
                         </div>
                     </div>
 
-                    <!-- TAB 2: HESAP BİLGİLERİM (Artık Güncellenebilir Form) -->
+                    <div class="tab-pane fade" id="v-pills-bookmarks" role="tabpanel">
+                        <h3 class="font-weight-bold mb-4 pb-2 border-bottom"><i class="mdi mdi-star text-warning me-2"></i> Favori Anketlerim</h3>
+                        <div id="myBookmarksList">
+                            <div class="text-center py-5"><div class="spinner-border text-warning"></div></div>
+                        </div>
+                    </div>
+
                     <div class="tab-pane fade" id="v-pills-profile" role="tabpanel">
                         <h3 class="font-weight-bold mb-4 pb-2 border-bottom"><i class="mdi mdi-shield-account-outline text-primary me-2"></i> Hesap Detayları</h3>
-
                         <form id="profileUpdateForm">
                             <div class="row">
                                 <div class="col-md-6 mb-4">
@@ -210,10 +266,6 @@
                                     <label class="text-muted font-weight-bold mb-2">Yetki Seviyesi</label>
                                     <div class="form-control form-control-lg bg-light border-0 text-primary font-weight-bold" id="detailRole">...</div>
                                 </div>
-                                <div class="col-md-6 mb-4">
-                                    <label class="text-muted font-weight-bold mb-2">Hesap Durumu</label>
-                                    <div class="form-control form-control-lg bg-light border-0 text-success font-weight-bold"><i class="mdi mdi-check-circle"></i> Aktif</div>
-                                </div>
                             </div>
                             <div class="text-end">
                                 <button type="button" id="btnUpdateProfile" class="btn btn-gradient-primary px-5 py-3 rounded-pill font-weight-bold shadow-sm">
@@ -223,24 +275,22 @@
                         </form>
                     </div>
 
-                    <!-- 🔥 YENİ TAB 3: ŞİFRE DEĞİŞTİR -->
                     <div class="tab-pane fade" id="v-pills-password" role="tabpanel">
                         <h3 class="font-weight-bold mb-4 pb-2 border-bottom"><i class="mdi mdi-lock-reset text-danger me-2"></i> Şifre Değiştir</h3>
-
                         <div class="row">
                             <div class="col-md-8">
                                 <form id="passwordChangeForm">
                                     <div class="form-group mb-4">
                                         <label class="text-muted font-weight-bold mb-2">Mevcut Şifreniz</label>
-                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="currentPassword" placeholder="Şu anki şifrenizi girin..." required>
+                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="currentPassword" required>
                                     </div>
                                     <div class="form-group mb-4">
                                         <label class="text-muted font-weight-bold mb-2">Yeni Şifre</label>
-                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="newPassword" placeholder="Yeni şifrenizi belirleyin..." required>
+                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="newPassword" required>
                                     </div>
                                     <div class="form-group mb-4">
                                         <label class="text-muted font-weight-bold mb-2">Yeni Şifre (Tekrar)</label>
-                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="newPasswordConfirm" placeholder="Yeni şifrenizi tekrar girin..." required>
+                                        <input type="password" class="form-control form-control-lg bg-light border-1" id="newPasswordConfirm" required>
                                     </div>
                                     <button type="button" id="btnChangePassword" class="btn btn-outline-danger px-5 py-3 rounded-pill font-weight-bold shadow-sm">
                                         <i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle
@@ -253,7 +303,6 @@
                 </div>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -262,50 +311,42 @@
         $(document).ready(function () {
             loadUserProfile();
 
-            // Tab Geçişlerini Sağlama
             $(".nav-pills .nav-link").click(function () {
-                if($(this).attr("id")) {
+                if($(this).attr("data-bs-target")) {
                     $(".nav-pills .nav-link").removeClass("active");
                     $(this).addClass("active");
-                    var target = $(this).attr("data-bs-target") || $(this).attr("data-target");
+                    var target = $(this).attr("data-bs-target");
                     $(".tab-pane").removeClass("show active");
                     $(target).addClass("show active");
                 }
             });
 
-            // 🔥 PROFİL GÜNCELLEME İŞLEMİ
+            // Profil Güncelleme
             $("#btnUpdateProfile").click(function () {
                 var btn = $(this);
                 var token = localStorage.getItem("token");
                 var username = $("#detailUsername").val().trim();
                 var email = $("#detailEmail").val().trim();
 
-                if (!username || !email) {
-                    showErrorToast('Lütfen kullanıcı adı ve e-posta alanlarını doldurun.');
-                    return;
-                }
-
-                btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Güncelleniyor...');
+                if (!username || !email) { showErrorToast('Lütfen alanları doldurun.'); return; }
+                btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> İşleniyor...');
 
                 $.ajax({
-                    url: "https://localhost:7283/api/user/update-profile",
-                    type: "PUT",
-                    contentType: "application/json",
-                    headers: { "Authorization": "Bearer " + token },
+                    url: "https://localhost:7283/api/user/update-profile", type: "PUT", contentType: "application/json", headers: { "Authorization": "Bearer " + token },
                     data: JSON.stringify({ userName: username, email: email }),
                     success: function (res) {
                         btn.prop('disabled', false).html('<i class="mdi mdi-content-save me-1"></i> Bilgilerimi Güncelle');
                         $("#sideUsername").text(username);
-                        showSuccessToast('Profil bilgileriniz başarıyla güncellendi.');
+                        showSuccessToast('Profil başarıyla güncellendi.');
                     },
                     error: function (xhr) {
                         btn.prop('disabled', false).html('<i class="mdi mdi-content-save me-1"></i> Bilgilerimi Güncelle');
-                        showErrorToast(xhr.responseText || 'Güncelleme sırasında bir hata oluştu.');
+                        showErrorToast('Güncelleme hatası.');
                     }
                 });
             });
 
-            // 🔥 ŞİFRE DEĞİŞTİRME İŞLEMİ
+            // Şifre Güncelleme
             $("#btnChangePassword").click(function () {
                 var btn = $(this);
                 var token = localStorage.getItem("token");
@@ -313,38 +354,28 @@
                 var newPass = $("#newPassword").val();
                 var newPassConfirm = $("#newPasswordConfirm").val();
 
-                if (!currentPass || !newPass || !newPassConfirm) {
-                    showErrorToast('Lütfen tüm şifre alanlarını doldurun.');
-                    return;
-                }
-
-                if (newPass !== newPassConfirm) {
-                    showErrorToast('Yeni şifre ile tekrarı birbiriyle eşleşmiyor!');
-                    return;
-                }
+                if (!currentPass || !newPass || !newPassConfirm) { showErrorToast('Tüm alanları doldurun.'); return; }
+                if (newPass !== newPassConfirm) { showErrorToast('Yeni şifreler eşleşmiyor!'); return; }
 
                 btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> İşleniyor...');
 
                 $.ajax({
-                    url: "https://localhost:7283/api/user/change-password",
-                    type: "PUT",
-                    contentType: "application/json",
-                    headers: { "Authorization": "Bearer " + token },
+                    url: "https://localhost:7283/api/user/change-password", type: "PUT", contentType: "application/json", headers: { "Authorization": "Bearer " + token },
                     data: JSON.stringify({ currentPassword: currentPass, newPassword: newPass }),
-                    success: function (res) {
+                    success: function () {
                         btn.prop('disabled', false).html('<i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle');
                         $("#currentPassword, #newPassword, #newPasswordConfirm").val('');
-                        showSuccessToast('Şifreniz güvenli bir şekilde değiştirildi.');
+                        showSuccessToast('Şifre değiştirildi.');
                     },
-                    error: function (xhr) {
+                    error: function () {
                         btn.prop('disabled', false).html('<i class="mdi mdi-shield-check me-1"></i> Şifreyi Güncelle');
-                        showErrorToast(xhr.responseText || 'Şifreniz değiştirilemedi.');
+                        showErrorToast('Mevcut şifre yanlış veya kurala uymuyor.');
                     }
                 });
             });
         });
 
-        // Verileri Getirme İşlemi
+        // 🌟 ANA YÜKLEME FONKSİYONU 🌟
         function loadUserProfile() {
             var token = localStorage.getItem("token");
             if (!token) { window.location.href = "/Auth/Login"; return; }
@@ -354,52 +385,110 @@
                 type: "GET",
                 headers: { "Authorization": "Bearer " + token },
                 success: function (data) {
+                    // Profil ve Form Dolumu
                     $("#sideUsername").text(data.username);
                     $("#sideRole").text(data.role);
-
                     $("#detailUsername").val(data.username);
                     $("#detailEmail").val(data.email);
                     $("#detailRole").text(data.role);
 
-                    var listContainer = $("#mySurveysList");
-                    listContainer.empty();
+                    // 1. İstatistikler
+                    $("#statTotalSolved").text(data.stats.totalSolved);
+                    $("#statCategories").text(data.stats.categoriesExplored);
 
-                    if (data.participatedSurveys.length === 0) {
-                        listContainer.html(`
-                            <div class="text-center py-5">
-                                <i class="mdi mdi-text-box-search-outline text-muted" style="font-size: 5rem;"></i>
-                                <h4 class="mt-3 text-muted">Burası biraz ıssız...</h4>
-                                <a href="/Home/Index" class="btn btn-gradient-primary mt-2 px-4 rounded-pill">Anketleri Keşfet</a>
-                            </div>
-                        `);
-                        return;
+                    // 2. Başarımlar (Rozetler)
+                    var achContainer = $("#achievementsList");
+                    achContainer.empty();
+                    if (data.achievements.length === 0) {
+                        achContainer.html('<div class="col-12 text-muted fst-italic">Henüz bir rozet kazanmadın. Anket çözmeye başla!</div>');
+                    } else {
+                        $.each(data.achievements, function(i, ach) {
+                            achContainer.append(`
+                                <div class="col-md-4 col-sm-6 mb-3 fade-in-up delay-${(i%3)+1}">
+                                    <div class="achievement-badge h-100">
+                                        <div class="achievement-icon">${ach.icon}</div>
+                                        <h6 class="font-weight-bold text-dark mb-1">${ach.title}</h6>
+                                        <small class="text-muted">${ach.desc}</small>
+                                    </div>
+                                </div>
+                            `);
+                        });
                     }
 
-                   $.each(data.participatedSurveys, function (index, survey) {
-                        var date = new Date(survey.completedDate).toLocaleDateString("tr-TR", { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' });
+                    // 3. Etkinlik (Geçmiş Anketler)
+                    var listContainer = $("#mySurveysList");
+                    listContainer.empty();
+                    if (data.participatedSurveys.length === 0) {
+                        listContainer.html('<div class="text-center p-4 text-muted border-bottom">Geçmiş bulunamadı.</div>');
+                    } else {
+                        $.each(data.participatedSurveys, function (index, survey) {
+                            // Zamanı "2 gün önce" formatına çevir
+                            var timeAgo = timeSince(survey.completedDate);
 
-                        var delayClass = "delay-" + ((index % 3) + 1);
+                            var item = `
+                                <div class="survey-list-item d-flex justify-content-between align-items-center py-3 px-4 border-bottom bg-white">
+                                    <div>
+                                        <span class="text-primary small font-weight-bold"><i class="mdi mdi-clock-outline me-1"></i> ${timeAgo}</span>
+                                        <h6 class="font-weight-bold mt-1 mb-0 text-dark">${survey.surveyTitle} <span class="text-muted font-weight-normal" style="font-size:0.85rem;">çözüldü</span></h6>
+                                    </div>
+                                    <div><a href="/Home/UserResult/${survey.surveyId}" class="btn btn-sm btn-outline-primary rounded-pill px-3 font-weight-bold">Sonuçlar</a></div>
+                                </div>
+                            `;
+                            listContainer.append(item);
+                        });
+                    }
 
-                        var item = `
-                            <div class="survey-list-item fade-in-up ${delayClass} d-flex justify-content-between align-items-center py-4 px-3 border-bottom rounded">
-                                <div>
-                                    <h5 class="font-weight-bold mb-1 text-dark">${survey.surveyTitle}</h5>
-                                    <span class="text-muted" style="font-size: 0.9rem;">
-                                        <i class="mdi mdi-calendar-check text-success me-1"></i> Katılım: ${date}
-                                    </span>
-                                </div>
-                                <div>
-                                    <a href="/Home/UserResult/${survey.surveyId}" class="btn btn-outline-primary rounded-pill px-4 shadow-sm font-weight-bold d-flex align-items-center justify-content-center">
-                                        <span>Sonuçlar</span>
-                                        <i class="mdi mdi-arrow-right ms-2" style="font-size: 1.1rem; transform: translateY(1px);"></i>
-                                    </a>
-                                </div>
+                    // 4. Favoriler (Bookmarks)
+                    var bmContainer = $("#myBookmarksList");
+                    bmContainer.empty();
+                    if (data.bookmarks.length === 0) {
+                        bmContainer.html(`
+                            <div class="text-center py-5">
+                                <i class="mdi mdi-star-outline text-muted" style="font-size: 4rem;"></i>
+                                <h5 class="mt-3 text-muted">Favori anketin yok.</h5>
+                                <p class="small text-muted">Keşfet sayfasından anketleri kaydedebilirsin.</p>
                             </div>
-                        `;
-                        listContainer.append(item);
-                    });
+                        `);
+                    } else {
+                        $.each(data.bookmarks, function (index, b) {
+                            var item = `
+                                <div class="survey-list-item d-flex justify-content-between align-items-center py-3 px-4 border rounded mb-3 bg-white fade-in-up delay-${(index%3)+1}">
+                                    <div>
+                                        <h5 class="font-weight-bold mb-0 text-dark">${b.surveyTitle}</h5>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <a href="/Home/SurveyDetail/${b.surveyId}" class="btn btn-sm btn-gradient-primary rounded-pill px-3 font-weight-bold">Çöz <i class="mdi mdi-arrow-right"></i></a>
+                                        <button class="btn btn-sm btn-light text-danger rounded-pill" onclick="removeBookmark(${b.surveyId}, this)" title="Favorilerden Çıkar"><i class="mdi mdi-bookmark-remove"></i></button>
+                                    </div>
+                                </div>
+                            `;
+                            bmContainer.append(item);
+                        });
+                    }
                 },
                 error: function () { logout(); }
+            });
+        }
+
+        // Favoriden Çıkarma Metodu
+        function removeBookmark(id, btnElement) {
+            var token = localStorage.getItem("token");
+            var btn = $(btnElement);
+            btn.prop("disabled", true);
+
+            $.ajax({
+                url: "https://localhost:7283/api/user/bookmark/" + id,
+                type: "POST",
+                headers: { "Authorization": "Bearer " + token },
+                success: function (res) {
+                    showSuccessToast("Anket favorilerden kaldırıldı.");
+                    // Animasyonlu şekilde satırı uçur
+                    btn.closest('.survey-list-item').slideUp(300, function(){ $(this).remove(); });
+                },
+                error: function () {
+                    showErrorToast("İşlem başarısız.");
+                    btn.prop("disabled", false);
+                }
             });
         }
 
@@ -407,6 +496,22 @@
             localStorage.removeItem("token");
             localStorage.removeItem("userRole");
             window.location.href = "/Home/Index";
+        }
+        function timeSince(dateString) {
+            var date = new Date(dateString);
+            var seconds = Math.floor((new Date() - date) / 1000);
+            var interval = seconds / 31536000;
+
+            if (interval > 1) return Math.floor(interval) + " yıl önce";
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " ay önce";
+            interval = seconds / 86400;
+            if (interval > 1) return Math.floor(interval) + " gün önce";
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + " saat önce";
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " dakika önce";
+            return "az önce";
         }
     </script>
 }

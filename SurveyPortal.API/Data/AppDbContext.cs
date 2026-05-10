@@ -16,6 +16,7 @@ namespace SurveyPortal.API.Data
         public DbSet<Option> Options { get; set; }
         public DbSet<SurveyResponse> SurveyResponses { get; set; }
         public DbSet<Answer> Answers { get; set; }
+        public DbSet<Bookmark> Bookmarks { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

@@ -394,107 +394,142 @@
         });
 
         function loadActiveSurveys() {
-            var container = $("#userSurveyList");
-            container.empty();
+             var container = $("#userSurveyList");
+             container.empty();
 
-            for(let i=0; i<3; i++){
-                container.append(`
-                    <div class="col-md-4 mb-4">
-                        <div class="card shadow-sm border-0 h-100 p-4">
-                            <div class="d-flex justify-content-between mb-3">
-                                <div class="skeleton" style="width: 60px; height: 20px;"></div>
-                                <div class="skeleton" style="width: 80px; height: 16px;"></div>
-                            </div>
-                            <div class="skeleton skeleton-title"></div>
-                            <div class="skeleton skeleton-text"></div>
-                            <div class="skeleton skeleton-text" style="width:80%;"></div>
-                            <div class="skeleton skeleton-text mt-3" style="width:40%;"></div>
-                            <div class="skeleton skeleton-btn"></div>
-                        </div>
-                    </div>
-                `);
-            }
+             for(let i=0; i<3; i++){
+                 container.append(`
+                     <div class="col-md-4 mb-4">
+                         <div class="card shadow-sm border-0 h-100 p-4">
+                             <div class="d-flex justify-content-between mb-3">
+                                 <div class="skeleton" style="width: 60px; height: 20px;"></div>
+                                 <div class="skeleton" style="width: 80px; height: 16px;"></div>
+                             </div>
+                             <div class="skeleton skeleton-title"></div>
+                             <div class="skeleton skeleton-text"></div>
+                             <div class="skeleton skeleton-text" style="width:80%;"></div>
+                             <div class="skeleton skeleton-text mt-3" style="width:40%;"></div>
+                             <div class="skeleton skeleton-btn"></div>
+                         </div>
+                     </div>
+                 `);
+             }
 
-            var catId = $(".category-chip.active").attr("data-id") || "";
-            var search = $("#searchInput").val();
-            var sort = $("#sortFilter").val();
+             var catId = $(".category-chip.active").attr("data-id") || "";
+             var search = $("#searchInput").val();
+             var sort = $("#sortFilter").val();
+             var token = localStorage.getItem("token"); 
 
-            $.ajax({
-                url: `https://localhost:7283/api/survey/active?categoryId=${catId}&search=${search}&sortBy=${sort}`,
-                type: "GET",
-                success: function (data) {
-                    container.empty();
+             $.ajax({
+                 url: `https://localhost:7283/api/survey/active?categoryId=${catId}&search=${search}&sortBy=${sort}`,
+                 type: "GET",
+                 success: function (data) {
+                     container.empty();
 
-                    if (data.length === 0) {
-                        container.append(`
-                            <div class="col-12 text-center py-5">
-                                <div class="mb-3"><i class="mdi mdi-text-box-search-outline text-muted" style="font-size: 5rem;"></i></div>
-                                <h4 class="text-muted font-weight-bold">Sonuç Bulunamadı</h4>
-                                <p class="text-muted">Seçtiğiniz filtrelere uygun aktif bir anket bulunmuyor.</p>
-                            </div>
-                        `);
-                        return;
-                    }
+                     if (data.length === 0) {
+                         container.append(`
+                             <div class="col-12 text-center py-5">
+                                 <div class="mb-3"><i class="mdi mdi-text-box-search-outline text-muted" style="font-size: 5rem;"></i></div>
+                                 <h4 class="text-muted font-weight-bold">Sonuç Bulunamadı</h4>
+                                 <p class="text-muted">Seçtiğiniz filtrelere uygun aktif bir anket bulunmuyor.</p>
+                             </div>
+                         `);
+                         return;
+                     }
 
-                    $.each(data, function (index, survey) {
-                        var desc = survey.description ? survey.description : "Bu anket için henüz bir açıklama girilmemiş.";
-                        var estTime = survey.estimatedTime || 3;
-                        var compRate = survey.completionRate || 85;
+                     $.each(data, function (index, survey) {
+                         var desc = survey.description ? survey.description : "Bu anket için henüz bir açıklama girilmemiş.";
+                         var estTime = survey.estimatedTime || 3;
+                         var compRate = survey.completionRate || 85;
 
-                        var statusBadges = "";
-                        var diffDays = Math.floor((new Date() - new Date(survey.createdDate)) / (1000 * 60 * 60 * 24));
+                         var statusBadges = "";
+                         var diffDays = Math.floor((new Date() - new Date(survey.createdDate)) / (1000 * 60 * 60 * 24));
 
-                        if (survey.participantCount > 5) {
-                            statusBadges += `<span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2 py-1"><i class="mdi mdi-fire"></i> Trend</span>`;
-                        }
-                        if (diffDays <= 7) {
-                            statusBadges += `<span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 ms-1"><i class="mdi mdi-new-box"></i> Yeni</span>`;
-                        }
+                         if (survey.participantCount > 5) {
+                             statusBadges += `<span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-2 py-1"><i class="mdi mdi-fire"></i> Trend</span>`;
+                         }
+                         if (diffDays <= 7) {
+                             statusBadges += `<span class="badge bg-success bg-opacity-10 text-success rounded-pill px-2 py-1 ms-1"><i class="mdi mdi-new-box"></i> Yeni</span>`;
+                         }
 
-                        // 🔥 OKLAR SİLİNDİ
-                        var btnHtml = "";
-                        var participatedBadge = "";
-                        if (survey.isParticipated) {
-                            participatedBadge = `<div class="position-absolute" style="top: -10px; right: -10px; z-index: 10;"><span class="badge bg-success shadow" style="font-size:0.8rem; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;"><i class="mdi mdi-check text-white" style="font-size: 1.2rem;"></i></span></div>`;
-                            btnHtml = `<a href="/Home/UserResult/${survey.id}" class="btn btn-outline-success btn-block w-100 py-2 mt-3 font-weight-bold rounded-pill text-center">Sonuçları İncele</a>`;
-                        } else {
-                            btnHtml = `<button class="btn btn-gradient-primary btn-block w-100 py-2 mt-3 font-weight-bold rounded-pill text-center" onclick="solveSurvey('${survey.id}')">Anketi Çöz</button>`;
-                        }
+                         var bookmarkBtn = "";
+                         if (token) {
+                             bookmarkBtn = `<button class="btn btn-sm btn-light border-0 position-absolute" style="top: 15px; right: 15px; z-index: 10; border-radius: 50%; width: 35px; height: 35px;" onclick="toggleBookmark(${survey.id}, this)" title="Sonra Çözmek İçin Kaydet"><i class="mdi mdi-star-outline text-warning" style="font-size: 1.2rem;"></i></button>`;
+                         }
 
-                        var card = `
-                            <div class="col-md-4 mb-4 d-flex align-items-stretch">
-                                <div class="modern-survey-card w-100 p-4 shadow-sm">
-                                    ${participatedBadge}
-                                    <div class="card-badge-container">
-                                        <span class="badge badge-outline-primary rounded-pill px-3 py-1 font-weight-bold">${survey.categoryName}</span>
-                                        ${statusBadges}
-                                    </div>
-                                    <h4 class="text-dark font-weight-bold mb-2 line-clamp-2" style="font-size: 1.15rem; line-height: 1.4;">${survey.title}</h4>
-                                    <p class="text-muted mb-3 line-clamp-2" style="font-size: 0.85rem;">${desc}</p>
-                                    <div class="text-muted small mb-4 font-weight-bold">
-                                        <i class="mdi mdi-clock-outline me-1 text-primary"></i> ⏱ ${estTime} dk tahmin
-                                    </div>
-                                    <div class="card-footer-stats">
-                                        <div class="d-flex justify-content-between align-items-center mb-1">
-                                            <div class="text-muted small font-weight-bold"><i class="mdi mdi-account-group text-primary"></i> 👥 ${survey.participantCount} Katılım</div>
-                                            <div class="text-primary small font-weight-bold">%${compRate}</div>
-                                        </div>
-                                        <div class="mini-progress-bg mb-2 shadow-sm">
-                                            <div class="mini-progress-fill" style="width: ${compRate}%;"></div>
-                                        </div>
-                                        ${btnHtml}
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        container.append(card);
-                    });
-                }
-            });
-        }
+                         var btnHtml = "";
+                         var participatedBadge = "";
+                         if (survey.isParticipated) {
+                             participatedBadge = `<div class="position-absolute" style="top: -10px; right: -10px; z-index: 10;"><span class="badge bg-success shadow" style="font-size:0.8rem; border-radius: 50%; width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;"><i class="mdi mdi-check text-white" style="font-size: 1.2rem;"></i></span></div>`;
+                             btnHtml = `<a href="/Home/UserResult/${survey.id}" class="btn btn-outline-success btn-block w-100 py-2 mt-3 font-weight-bold rounded-pill text-center">Sonuçları İncele</a>`;
+                             bookmarkBtn = ""; 
+                         } else {
+                             btnHtml = `<button class="btn btn-gradient-primary btn-block w-100 py-2 mt-3 font-weight-bold rounded-pill text-center" onclick="solveSurvey('${survey.id}')">Anketi Çöz</button>`;
+                         }
 
-        function solveSurvey(id) {
-            window.location.href = '/Home/SurveyDetail/' + id;
-        }
+                         var card = `
+                             <div class="col-md-4 mb-4 d-flex align-items-stretch">
+                                 <div class="modern-survey-card w-100 p-4 shadow-sm">
+                                     ${participatedBadge}
+                                     ${bookmarkBtn}
+                                     <div class="card-badge-container">
+                                         <span class="badge badge-outline-primary rounded-pill px-3 py-1 font-weight-bold">${survey.categoryName}</span>
+                                         ${statusBadges}
+                                     </div>
+                                     <h4 class="text-dark font-weight-bold mb-2 line-clamp-2" style="font-size: 1.15rem; line-height: 1.4; padding-right: 30px;">${survey.title}</h4>
+                                     <p class="text-muted mb-3 line-clamp-2" style="font-size: 0.85rem;">${desc}</p>
+                                     <div class="text-muted small mb-4 font-weight-bold">
+                                         <i class="mdi mdi-clock-outline me-1 text-primary"></i> ⏱ ${estTime} dk tahmin
+                                     </div>
+                                     <div class="card-footer-stats">
+                                         <div class="d-flex justify-content-between align-items-center mb-1">
+                                             <div class="text-muted small font-weight-bold"><i class="mdi mdi-account-group text-primary"></i> 👥 ${survey.participantCount} Katılım</div>
+                                             <div class="text-primary small font-weight-bold">%${compRate}</div>
+                                         </div>
+                                         <div class="mini-progress-bg mb-2 shadow-sm">
+                                             <div class="mini-progress-fill" style="width: ${compRate}%;"></div>
+                                         </div>
+                                         ${btnHtml}
+                                     </div>
+                                 </div>
+                             </div>
+                         `;
+                         container.append(card);
+                     });
+                 }
+             });
+         }
+
+         function solveSurvey(id) {
+             window.location.href = '/Home/SurveyDetail/' + id;
+         }
+
+         function toggleBookmark(id, btnElement) {
+             var token = localStorage.getItem("token");
+             if (!token) return;
+
+             var icon = $(btnElement).find("i");
+             icon.removeClass("mdi-star-outline").addClass("mdi-spin mdi-loading"); 
+
+             $.ajax({
+                 url: "https://localhost:7283/api/user/bookmark/" + id,
+                 type: "POST",
+                 headers: { "Authorization": "Bearer " + token },
+                 success: function (res) {
+                     icon.removeClass("mdi-spin mdi-loading");
+                     if (res.isBookmarked) {
+                         icon.removeClass("mdi-star-outline").addClass("mdi-star"); // İçi dolu yıldız
+                         showSuccessToast("Anket favorilere eklendi.");
+                     } else {
+                         icon.removeClass("mdi-star").addClass("mdi-star-outline"); // İçi boş yıldız
+                         showSuccessToast("Anket favorilerden çıkarıldı.");
+                     }
+                 },
+                 error: function () {
+                     icon.removeClass("mdi-spin mdi-loading").addClass("mdi-star-outline");
+                     showErrorToast("İşlem başarısız oldu.");
+                 }
+             });
+         }
     </script>
 }

@@ -1,5 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Diagnostics; 
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,8 +11,27 @@ using SurveyPortal.API.Repositories.Concrete;
 using SurveyPortal.API.Repositories.Interfaces;
 using System.Text;
 using SurveyPortal.API.Services;
+using Microsoft.AspNetCore.ResponseCompression;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// 🔥 6.4 AŞAMA: PERFORMANS VE SEO (Response Compression)
+// Sunucudan dönen verileri GZIP/Brotli ile sıkıştırarak MB'ları KB'lara düşürür.
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+
+// 🔥 6.4 AŞAMA: CACHING (Önbellekleme)
+// Sık değişmeyen verileri (Kategoriler vb.) RAM'de tutup SQL'i yormamak için.
+builder.Services.AddMemoryCache();
+
+// 🔥 6.2 AŞAMA: REAL-TIME (SignalR)
+// Kullanıcılar anket çözerken "X kişisi az önce anket çözdü" bildirimi atabilmek için.
+builder.Services.AddSignalR();
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -111,6 +130,8 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
+app.UseResponseCompression(); 
+
 app.UseExceptionHandler(appError =>
 {
     appError.Run(async context =>
@@ -121,12 +142,11 @@ app.UseExceptionHandler(appError =>
         var contextFeature = context.Features.Get<IExceptionHandlerFeature>();
         if (contextFeature != null)
         {
-
             var errorResponse = new
             {
                 success = false,
                 message = "Sunucu tarafında beklenmeyen bir hata oluştu. Lütfen daha sonra tekrar deneyin.",
-                detail = contextFeature.Error.Message // Geliştirici olarak hatanın sebebini görebilmen için
+                detail = contextFeature.Error.Message
             };
 
             await context.Response.WriteAsJsonAsync(errorResponse);
@@ -145,6 +165,8 @@ app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+
+// app.MapHub<SurveyHub>("/surveyHub"); 
 
 using (var scope = app.Services.CreateScope())
 {
