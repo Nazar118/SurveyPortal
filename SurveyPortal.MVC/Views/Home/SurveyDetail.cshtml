@@ -152,6 +152,24 @@
         var draftKey = 'survey_draft_' + surveyId;
 
         $(document).ready(function () {
+
+            var token = localStorage.getItem("token");
+            if (!token) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Giriş Gerekli',
+                    text: 'Anketi çözebilmek için lütfen önce giriş yapın veya kayıt olun.',
+                    confirmButtonColor: '#b66dff',
+                    confirmButtonText: 'Giriş Yap',
+                    allowOutsideClick: false 
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = "/Auth/Login";
+                    }
+                });
+                return; 
+            }
+
             loadSurveyData();
 
             $("#btnNext").click(function () { nextStep(); });
@@ -165,7 +183,7 @@
             });
         });
 
-        // 🔥 YENİ: API'den gelen tipi ne olursa olsun doğru algılayan Akıllı Fonksiyon
+
         function getQType(q) {
             if (!q.options || q.options.length === 0) return "Text"; // Şık yoksa kesin yazıdır
             var t = q.questionType ? q.questionType.toString().toLowerCase() : "";

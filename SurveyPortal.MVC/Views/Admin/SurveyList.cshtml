@@ -318,6 +318,9 @@
                 url: "https://localhost:7283/api/survey",
                 type: "POST",
                 contentType: "application/json",
+                    headers: {
+            "Authorization": "Bearer " + localStorage.getItem("token") 
+        },
                 data: JSON.stringify(surveyData),
                 success: function () {
                     $("#addSurveyModal").modal('hide');
@@ -440,50 +443,58 @@
             });
         }
 
-        // 🔥 AI ÜRETİM BUTONU TETİKLEYİCİSİ
-        $("#btnGenerateAI").click(function () {
-            var topic = $("#aiSurveyTopic").val();
-            var count = $("#aiQuestionCount").val();
-            var categoryId = $("#aiCategoryId").val();
+        // 🔥 AI ÜRETİM BUTONU TETİKLEYİCİSİ (GÜNCELLENDİ)
+         $("#btnGenerateAI").click(function () {
+             var topic = $("#aiSurveyTopic").val();
+             var count = $("#aiQuestionCount").val();
+             var categoryId = $("#aiCategoryId").val();
 
-            if (!topic || !categoryId) {
-                showErrorToast('Lütfen Konu ve Kategori alanlarını doldurunuz!');
-                return;
-            }
+             if (!topic || !categoryId) {
+                 showErrorToast('Lütfen Konu ve Kategori alanlarını doldurunuz!');
+                 return;
+             }
 
-            var btn = $(this);
-            btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Yapay Zeka Düşünüyor...');
+             var btn = $(this);
+             btn.prop('disabled', true).html('<i class="mdi mdi-loading mdi-spin"></i> Yapay Zeka Düşünüyor...');
 
-            var aiData = {
-                topic: topic,
-                questionCount: parseInt(count),
-                categoryId: parseInt(categoryId)
-            };
+             var aiData = {
+                 topic: topic,
+                 questionCount: parseInt(count),
+                 categoryId: parseInt(categoryId)
+             };
 
-            $.ajax({
-                url: "https://localhost:7283/api/survey/generate-ai", // 🔥 Bu API ucunu bir sonraki adımda yazacağız!
-                type: "POST",
-                contentType: "application/json",
-                data: JSON.stringify(aiData),
-                success: function () {
-                    $("#aiSurveyModal").modal('hide');
-                    $("#aiSurveyForm")[0].reset();
-                    btn.prop('disabled', false).html('<i class="mdi mdi-auto-fix me-1"></i> Üret ve Kaydet');
+             $.ajax({
+                 url: "https://localhost:7283/api/survey/ai/generate",
+                 type: "POST",
+                 contentType: "application/json",
+                 headers: {
+                     "Authorization": "Bearer " + localStorage.getItem("token")
+                 },
+                 data: JSON.stringify(aiData),
+                 success: function () {
+                     $("#aiSurveyModal").modal('hide');
+                     $("#aiSurveyForm")[0].reset();
+                     btn.prop('disabled', false).html('<i class="mdi mdi-auto-fix me-1"></i> Üret ve Kaydet');
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Sihir Gerçekleşti!',
-                        text: 'Yapay zeka anketinizi ve şıklarını başarıyla oluşturdu.',
-                        confirmButtonColor: '#1bcfb4'
-                    });
+                     Swal.fire({
+                         icon: 'success',
+                         title: 'Sihir Gerçekleşti!',
+                         text: 'Yapay zeka anketinizi ve şıklarını başarıyla oluşturdu.',
+                         confirmButtonColor: '#1bcfb4'
+                     });
 
-                    loadSurveys();
-                },
-                error: function (xhr) {
-                    btn.prop('disabled', false).html('<i class="mdi mdi-auto-fix me-1"></i> Üret ve Kaydet');
-                    showErrorToast(xhr.responseText || 'Yapay Zeka ile iletişim kurulamadı.');
-                }
-            });
-        });
+                     loadSurveys();
+                 },
+                 error: function (xhr) {
+                     btn.prop('disabled', false).html('<i class="mdi mdi-auto-fix me-1"></i> Üret ve Kaydet');
+                     // 401 hatası gelirse kullanıcıya nazikçe uyaralım
+                     if(xhr.status === 401) {
+                         showErrorToast('Oturumunuzun süresi dolmuş, lütfen çıkış yapıp tekrar girin.');
+                     } else {
+                         showErrorToast(xhr.responseText || 'Yapay Zeka ile iletişim kurulamadı.');
+                     }
+                 }
+             });
+         });
     </script>
 }

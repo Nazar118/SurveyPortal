@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SurveyPortal.API.Data;
@@ -432,110 +433,82 @@ namespace SurveyPortal.API.Controllers
 
             return Ok(resultDto);
         }
-        // 🔥 GERÇEK GOOGLE GEMINI AI ENTEGRASYONU
         [Authorize(Roles = "Admin")]
-        [HttpPost("generate-ai")]
+        [HttpPost("ai/generate")]
         public async Task<IActionResult> GenerateAiSurvey([FromBody] AiSurveyRequest request, [FromServices] AppDbContext context, [FromServices] IConfiguration config)
         {
             try
             {
-                // 🔥 Trim() ile görünmez boşlukları temizleyerek link hatasını (URI hatası) önlüyoruz
+                // 1. API Anahtarını Al
                 string apiKey = config["GeminiApiKey"]?.Trim();
                 if (string.IsNullOrEmpty(apiKey)) return BadRequest("API Anahtarı bulunamadı!");
 
-                // 1. Yapay Zekaya Gönderilecek Kesin Talimat (Prompt'u biraz daha sadeleştirdik)
-                string prompt = $@"Aşağıdaki konu hakkında tam {request.QuestionCount} adet anket sorusu üret: '{request.Topic}'. 
-        Soru Tipleri: 0 (Kısa Metin), 1 (Tek Seçim), 2 (Çoklu Seçim).
-        SADECE JSON döndür. Örnek format:
-        [
-            {{ ""Text"": ""Soru 1?"", ""Type"": 1, ""Options"": [""A"", ""B"", ""C""] }},
-            {{ ""Text"": ""Soru 2?"", ""Type"": 0, ""Options"": [] }}
-        ]";
+                // 🔥 KESİN ÇÖZÜM: Link bozulmasın diye "https" kısmını ve devamını ayırıp güvenli şekilde birleştiriyoruz!
+                string baseUrl = "https://generativelanguage.googleapis.com";
+                string endpoint = "/v1beta/models/gemini-1.5-flash:generateContent?key=";
+                string aiUrl = baseUrl + endpoint + apiKey;
 
-                // 2. GÜNCEL HTTP LİNKİ (v1beta yerine v1 ve model ismini düzelttik)
+                // 3. YAPAY ZEKAYA YÖNERGE
+                string prompt = $@"Sen profesyonel bir anketörsün. '{request.Topic}' konusu hakkında tam {request.QuestionCount} adet yaratıcı, mantıklı ve birbirinden farklı anket sorusu üret. 
+                Sadece şu JSON formatında cevap ver, ASLA fazladan metin kullanma:
+                [{{""Text"":""Sorunun metni burada olacak?"",""Type"":1,""Options"":[""Şık 1"",""Şık 2""]}}]
+                Soru Tipleri -> 0: Kısa Metin (Options boş dizi olsun []), 1: Tekli Seçim (Radio), 2: Çoklu Seçim (Checkbox).";
+
+                // 4. İSTEĞİ GÖNDER
                 using var client = new HttpClient();
-                string aiUrl = $"https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key={apiKey}";
-
-                // Eğer gemini-pro hata verirse alternatif olarak şunu deneyebilirsin:
-                // string aiUrl = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={apiKey}";
-
-                var payload = new
-                {
-                    contents = new[] {
-                new { parts = new[] { new { text = prompt } } }
-            }
-                };
-
+                var payload = new { contents = new[] { new { parts = new[] { new { text = prompt } } } } };
                 var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
 
-                // 3. İsteği Gönder ve Cevabı Al
                 var response = await client.PostAsync(aiUrl, content);
                 var responseString = await response.Content.ReadAsStringAsync();
 
                 if (!response.IsSuccessStatusCode)
-                    return StatusCode(500, "Yapay Zeka API Hatası: " + responseString);
+                    return StatusCode((int)response.StatusCode, "Google API Hatası: " + responseString);
 
-                // 4. Gelen JSON İçinden Sadece Text Kısmını Ayıkla
+                // 5. JSON AYIKLAMA
                 using var document = System.Text.Json.JsonDocument.Parse(responseString);
-                var aiTextResponse = document.RootElement
-                    .GetProperty("candidates")[0]
-                    .GetProperty("content")
-                    .GetProperty("parts")[0]
-                    .GetProperty("text").GetString();
+                var aiText = document.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
 
-                // Markdown temizliği
-                string cleanJson = aiTextResponse.Replace("```json", "").Replace("```", "").Trim();
+                // 🔥 BOZULMAZ TEMİZLEYİCİ: Kopyalama hatasını önlemek için karakterleri özel olarak ayırdık
+                string jsonTag = "`" + "`" + "`" + "json";
+                string emptyTag = "`" + "`" + "`";
+                string cleanJson = aiText.Replace(jsonTag, "").Replace(emptyTag, "").Trim();
 
-                // 5. C# Nesnesine Çevir (Büyük/Küçük harf duyarlılığını kapatıyoruz - PropertyNameCaseInsensitive)
                 var jsonOptions = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var generatedQuestions = System.Text.Json.JsonSerializer.Deserialize<List<AiQuestionResponse>>(cleanJson, jsonOptions);
+                var questions = System.Text.Json.JsonSerializer.Deserialize<List<AiQuestionResponse>>(cleanJson, jsonOptions);
 
-                if (generatedQuestions == null || generatedQuestions.Count == 0)
-                    return BadRequest("Yapay zeka anket formatını oluşturamadı.");
-
-                // 6. Veritabanına Kaydet
+                // 6. VERİTABANINA GERÇEK VERİLERİ KAYDET
                 var newSurvey = new Models.Survey
                 {
-                    Title = request.Topic + " Araştırması",
-                    Description = $"Bu anket, '{request.Topic}' konusu hakkında içgörüler toplamak amacıyla Google Gemini AI tarafından otomatik üretilmiştir.",
+                    Title = request.Topic + " Anketi",
+                    Description = "Bu anket Google Gemini AI tarafından sizin için özel olarak üretilmiştir.",
                     CategoryId = request.CategoryId,
                     Status = "Draft",
                     CreatedDate = DateTime.Now,
-                    Questions = new List<Models.Question>()
-                };
-
-                int order = 1;
-                foreach (var q in generatedQuestions)
-                {
-                    var questionEntity = new Models.Question
+                    Questions = questions.Select((q, index) => new Models.Question
                     {
                         QuestionText = q.Text,
                         QuestionType = q.Type,
                         IsRequired = true,
-                        OrderNumber = order++,
+                        OrderNumber = index + 1,
                         CreatedDate = DateTime.Now,
-                        Options = new List<Models.Option>()
-                    };
-
-                    if (q.Options != null && q.Options.Count > 0 && (q.Type == 1 || q.Type == 2))
-                    {
-                        int optOrder = 1;
-                        foreach (var opt in q.Options)
+                        Options = (q.Options ?? new List<string>()).Select((o, oIndex) => new Models.Option
                         {
-                            questionEntity.Options.Add(new Models.Option { OptionText = opt, OrderNumber = optOrder++, CreatedDate = DateTime.Now });
-                        }
-                    }
-                    newSurvey.Questions.Add(questionEntity);
-                }
+                            OptionText = o,
+                            OrderNumber = oIndex + 1,
+                            CreatedDate = DateTime.Now
+                        }).ToList()
+                    }).ToList()
+                };
 
                 context.Surveys.Add(newSurvey);
                 await context.SaveChangesAsync();
 
-                return Ok(new { Message = "Yapay zeka anketi başarıyla oluşturdu." });
+                return Ok(new { Message = "Başarılı" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "AI Üretimi sırasında hata: " + ex.Message);
+                return StatusCode(500, "Hata Detayı: " + ex.Message);
             }
         }
     }
