@@ -443,7 +443,6 @@ namespace SurveyPortal.API.Controllers
                 string apiKey = config["GeminiApiKey"]?.Trim();
                 if (string.IsNullOrEmpty(apiKey)) return BadRequest("API Anahtarı bulunamadı!");
 
-                // 🔥 KESİN ÇÖZÜM: Link bozulmasın diye "https" kısmını ve devamını ayırıp güvenli şekilde birleştiriyoruz!
                 string baseUrl = "https://generativelanguage.googleapis.com";
                 string endpoint = "/v1beta/models/gemini-1.5-flash:generateContent?key=";
                 string aiUrl = baseUrl + endpoint + apiKey;
