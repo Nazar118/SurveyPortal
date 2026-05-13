@@ -344,25 +344,41 @@
         });
 
         function loadHeroStatistics() {
-            $.ajax({
-                url: "https://localhost:7283/api/dashboard/overview",
-                type: "GET",
-                success: function (data) {
-                    $("#heroTotalSurvey").text(data.totalSurvey);
-                    $("#heroTotalCategory").text(data.totalCategory);
-                    $("#heroTodayParticipants").text(data.todayParticipants);
+             var token = localStorage.getItem("token");
 
-                    if(data.trendingSurvey) {
-                        $("#trendSurveyTitle").text(data.trendingSurvey.title);
-                        $("#trendSurveyCount").text(data.trendingSurvey.participantCount);
-                        $("#btnGoTrendSurvey").prop("disabled", false).attr("onclick", `solveSurvey('${data.trendingSurvey.id}')`);
-                    } else {
-                        $("#trendSurveyTitle").text("Şu an popüler anket yok");
-                        $("#btnGoTrendSurvey").hide();
-                    }
-                }
-            });
-        }
+             $.ajax({
+                 url: "https://localhost:7283/api/dashboard/overview",
+                 type: "GET",
+                 headers: token ? { "Authorization": "Bearer " + token } : {},
+                 success: function (data) {
+                     $("#heroTotalSurvey").text(data.totalSurvey);
+                     $("#heroTotalCategory").text(data.totalCategory);
+                     $("#heroTodayParticipants").text(data.todayParticipants);
+
+                     if(data.trendingSurvey) {
+                         $("#trendSurveyTitle").text(data.trendingSurvey.title);
+                         $("#trendSurveyCount").text(data.trendingSurvey.participantCount);
+
+                         if (data.trendingSurvey.isParticipated) {
+                             $("#btnGoTrendSurvey")
+                                 .prop("disabled", true)
+                                 .text("Zaten Çözüldü ✅")
+                                 .removeClass("btn-light text-primary")
+                                 .addClass("btn-secondary text-white");
+                         } else {
+                             $("#btnGoTrendSurvey")
+                                 .prop("disabled", false)
+                                 .text("Bu Anketi Çöz")
+                                 .attr("onclick", `solveSurvey('${data.trendingSurvey.id}')`);
+                         }
+
+                     } else {
+                         $("#trendSurveyTitle").text("Şu an popüler anket yok");
+                         $("#btnGoTrendSurvey").hide();
+                     }
+                 }
+             });
+         }
 
         function debounce(func, wait) {
             let timeout;

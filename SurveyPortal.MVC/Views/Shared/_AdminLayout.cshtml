@@ -6,6 +6,86 @@
     <link rel="stylesheet" href="~/assets/vendors/mdi/css/materialdesignicons.min.css">
     <link rel="stylesheet" href="~/assets/vendors/css/vendor.bundle.base.css">
     <link rel="stylesheet" href="~/assets/css/style.css">
+
+    <!-- 🔥 YÖNETİCİ PANELİ SABİTLEME VE SCROLL STİLLERİ BURAYA EKLENDİ 🔥 -->
+    <style>
+        /* Tüm sayfanın dışarıdan kaymasını kilitliyoruz */
+        body, html {
+            height: 100vh;
+            overflow: hidden !important;
+        }
+
+        /* Üst Menüyü (Navbar) en üste sabitliyoruz */
+        .navbar {
+            position: fixed !important;
+            top: 0;
+            right: 0;
+            left: 0;
+            z-index: 1030;
+        }
+
+        /* Sayfa Gövdesini üst menünün altında başlatıyoruz */
+        .page-body-wrapper {
+            padding-top: 70px !important;
+            height: 100vh;
+            display: flex;
+        }
+
+        /* Sol Menüyü (Sidebar) sola sabitliyoruz */
+        .sidebar {
+            position: fixed !important;
+            left: 0;
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        /* Ana İçerik Alanı - SADECE BURASI KAYACAK */
+        .main-panel {
+            margin-left: 260px;
+            width: calc(100% - 260px);
+            height: calc(100vh - 70px);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+            /* 🔥 ANA İÇERİK ALANI İÇİN ÖZEL ZARİF SCROLLBAR */
+            .main-panel::-webkit-scrollbar {
+                width: 8px;
+            }
+
+            .main-panel::-webkit-scrollbar-track {
+                background: rgba(0,0,0,0.02);
+            }
+
+            .main-panel::-webkit-scrollbar-thumb {
+                background-color: #b66dff;
+                border-radius: 10px;
+            }
+
+                .main-panel::-webkit-scrollbar-thumb:hover {
+                    background-color: #9c4be8;
+                }
+
+        /* Dark Mode desteği */
+        body.dark-mode .main-panel::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.02);
+        }
+
+        body.dark-mode .main-panel::-webkit-scrollbar-thumb {
+            background-color: #7922e5;
+        }
+
+        @@media (max-width: 991px) {
+            .main-panel
+
+        {
+            margin-left: 0;
+            width: 100%;
+        }
+
+        }
+    </style>
 </head>
 <body>
     <div class="container-scroller">

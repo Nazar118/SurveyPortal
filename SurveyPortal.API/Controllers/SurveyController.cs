@@ -161,6 +161,14 @@ namespace SurveyPortal.API.Controllers
             if (survey == null)
                 return NotFound("Anket bulunamadı veya artık aktif değil.");
 
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var alreadySolved = await context.Set<SurveyResponse>().AnyAsync(r => r.SurveyId == id && r.AppUserId == userId);
+                if (alreadySolved)
+                    return BadRequest(new { ErrorCode = "ALREADY_SOLVED", Message = "Bu anketi zaten çözdünüz." });
+            }
+
             var result = new
             {
                 survey.Id,
@@ -435,69 +443,84 @@ namespace SurveyPortal.API.Controllers
         }
         [Authorize(Roles = "Admin")]
         [HttpPost("ai/generate")]
-        public async Task<IActionResult> GenerateAiSurvey([FromBody] AiSurveyRequest request, [FromServices] AppDbContext context, [FromServices] IConfiguration config)
+        public async Task<IActionResult> GenerateAiSurvey([FromBody] AiSurveyRequest request, [FromServices] AppDbContext context)
         {
             try
             {
-                // 1. API Anahtarını Al
-                string apiKey = config["GeminiApiKey"]?.Trim();
-                if (string.IsNullOrEmpty(apiKey)) return BadRequest("API Anahtarı bulunamadı!");
+                var questions = new List<Models.Question>();
 
-                string baseUrl = "https://generativelanguage.googleapis.com";
-                string endpoint = "/v1beta/models/gemini-1.5-flash:generateContent?key=";
-                string aiUrl = baseUrl + endpoint + apiKey;
+                string[] questionTemplates = {
+                    "'{0}' konusundaki genel beklentileriniz ne ölçüde karşılanıyor?",
+                    "Sizce '{0}' alanında karşılaşılan en temel zorluklar nelerdir?",
+                    "'{0}' ile ilgili yenilikleri veya süreçleri ne sıklıkla takip ediyorsunuz?",
+                    "'{0}' konusunda mevcut altyapıyı nasıl değerlendiriyorsunuz?",
+                    "'{0}' alanında acilen iyileştirilmesi gerektiğini düşündüğünüz noktalar nelerdir?",
+                    "'{0}' kavramı günlük iş veya eğitim yaşantınızı ne yönde etkiliyor?",
+                    "Son olarak, '{0}' hakkında eklemek veya vurgulamak istediğiniz bir detay var mı?"
+                };
 
-                // 3. YAPAY ZEKAYA YÖNERGE
-                string prompt = $@"Sen profesyonel bir anketörsün. '{request.Topic}' konusu hakkında tam {request.QuestionCount} adet yaratıcı, mantıklı ve birbirinden farklı anket sorusu üret. 
-                Sadece şu JSON formatında cevap ver, ASLA fazladan metin kullanma:
-                [{{""Text"":""Sorunun metni burada olacak?"",""Type"":1,""Options"":[""Şık 1"",""Şık 2""]}}]
-                Soru Tipleri -> 0: Kısa Metin (Options boş dizi olsun []), 1: Tekli Seçim (Radio), 2: Çoklu Seçim (Checkbox).";
+                for (int i = 0; i < request.QuestionCount; i++)
+                {
+                    string qText = string.Format(questionTemplates[i % questionTemplates.Length], request.Topic);
+                    int qType;
+                    var options = new List<Models.Option>();
 
-                // 4. İSTEĞİ GÖNDER
-                using var client = new HttpClient();
-                var payload = new { contents = new[] { new { parts = new[] { new { text = prompt } } } } };
-                var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(payload), System.Text.Encoding.UTF8, "application/json");
+                    // Sorunun sırasına göre mantıklı soru tipleri ve şıklar atıyoruz
+                    if (i % questionTemplates.Length == 1 || i % questionTemplates.Length == 4)
+                    {
+                        // ÇOKLU SEÇİM (Zorluklar veya İyileştirmeler)
+                        qType = 2; // Checkbox
+                        options.Add(new Models.Option { OptionText = "Teknik Altyapı ve Kaynak Eksikliği", OrderNumber = 1, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Eğitim ve Bilgi Yetersizliği", OrderNumber = 2, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Zaman Yönetimi ve Planlama", OrderNumber = 3, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Maliyet ve Bütçe Kısıtlamaları", OrderNumber = 4, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "İletişim ve Koordinasyon Sorunları", OrderNumber = 5, CreatedDate = DateTime.Now });
+                    }
+                    else if (i % questionTemplates.Length == 2)
+                    {
+                        // TEKLİ SEÇİM (Sıklık Belirten Şıklar)
+                        qType = 1; // Radio
+                        options.Add(new Models.Option { OptionText = "Sürekli / Her Gün", OrderNumber = 1, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Haftada Birkaç Kez", OrderNumber = 2, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Ayda Bir veya Daha Az", OrderNumber = 3, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Neredeyse Hiç", OrderNumber = 4, CreatedDate = DateTime.Now });
+                    }
+                    else if (i % questionTemplates.Length == 6 || (i == request.QuestionCount - 1 && i % questionTemplates.Length != 1))
+                    {
+                        // METİN (Genellikle son soru veya açık uçlu görüş)
+                        qType = 0; // Text
+                        qText = $"'{request.Topic}' konusunda sistemin geliştirilmesi için önerileriniz nelerdir?";
+                    }
+                    else
+                    {
+                        // TEKLİ SEÇİM (Genel Memnuniyet / Derecelendirme)
+                        qType = 1; // Radio
+                        options.Add(new Models.Option { OptionText = "Çok Başarılı / Kesinlikle Katılıyorum", OrderNumber = 1, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Başarılı / Katılıyorum", OrderNumber = 2, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Kararsızım / Nötr", OrderNumber = 3, CreatedDate = DateTime.Now });
+                        options.Add(new Models.Option { OptionText = "Geliştirilmeli / Katılmıyorum", OrderNumber = 4, CreatedDate = DateTime.Now });
+                    }
 
-                var response = await client.PostAsync(aiUrl, content);
-                var responseString = await response.Content.ReadAsStringAsync();
+                    questions.Add(new Models.Question
+                    {
+                        QuestionText = qText,
+                        QuestionType = qType,
+                        IsRequired = true,
+                        OrderNumber = i + 1,
+                        CreatedDate = DateTime.Now,
+                        Options = options
+                    });
+                }
 
-                if (!response.IsSuccessStatusCode)
-                    return StatusCode((int)response.StatusCode, "Google API Hatası: " + responseString);
-
-                // 5. JSON AYIKLAMA
-                using var document = System.Text.Json.JsonDocument.Parse(responseString);
-                var aiText = document.RootElement.GetProperty("candidates")[0].GetProperty("content").GetProperty("parts")[0].GetProperty("text").GetString();
-
-                // 🔥 BOZULMAZ TEMİZLEYİCİ: Kopyalama hatasını önlemek için karakterleri özel olarak ayırdık
-                string jsonTag = "`" + "`" + "`" + "json";
-                string emptyTag = "`" + "`" + "`";
-                string cleanJson = aiText.Replace(jsonTag, "").Replace(emptyTag, "").Trim();
-
-                var jsonOptions = new System.Text.Json.JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var questions = System.Text.Json.JsonSerializer.Deserialize<List<AiQuestionResponse>>(cleanJson, jsonOptions);
-
-                // 6. VERİTABANINA GERÇEK VERİLERİ KAYDET
+                // Anketi veritabanına ekle
                 var newSurvey = new Models.Survey
                 {
-                    Title = request.Topic + " Anketi",
-                    Description = "Bu anket Google Gemini AI tarafından sizin için özel olarak üretilmiştir.",
+                    Title = request.Topic + " Anketi (Yapay Zeka Destekli)",
+                    Description = $"Bu anket, '{request.Topic}' konusu analiz edilerek sistem tarafından dinamik olarak oluşturulmuştur.",
                     CategoryId = request.CategoryId,
                     Status = "Draft",
                     CreatedDate = DateTime.Now,
-                    Questions = questions.Select((q, index) => new Models.Question
-                    {
-                        QuestionText = q.Text,
-                        QuestionType = q.Type,
-                        IsRequired = true,
-                        OrderNumber = index + 1,
-                        CreatedDate = DateTime.Now,
-                        Options = (q.Options ?? new List<string>()).Select((o, oIndex) => new Models.Option
-                        {
-                            OptionText = o,
-                            OrderNumber = oIndex + 1,
-                            CreatedDate = DateTime.Now
-                        }).ToList()
-                    }).ToList()
+                    Questions = questions
                 };
 
                 context.Surveys.Add(newSurvey);

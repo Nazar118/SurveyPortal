@@ -128,7 +128,11 @@
         </div>
 
         <!-- ALT KISIM (Navigasyon Butonları) -->
-        <div class="card-footer bg-light border-top p-4 d-flex justify-content-between align-items-center">
+        <div class="card-footer bg-light border-top p-4 d-flex justify-content-between align-items-center" id="surveyFooter">
+            <button class="btn btn-outline-danger px-4 py-2 rounded-pill font-weight-bold me-2" onclick="window.location.href='/Home/Index'">
+                <i class="mdi mdi-close-circle-outline me-1"></i> Çık
+            </button>
+
             <button class="btn btn-outline-secondary px-4 py-2 rounded-pill font-weight-bold" id="btnPrev" style="display:none; transition: all 0.3s;">
                 <i class="mdi mdi-arrow-left me-1"></i> Önceki
             </button>
@@ -149,7 +153,8 @@
         var questionsData = [];
         var currentStep = 0;
         var answers = {};
-        var draftKey = 'survey_draft_' + surveyId;
+                var currentToken = localStorage.getItem("token") || "guest";
+        var draftKey = 'survey_draft_' + surveyId + '_' + currentToken.substring(currentToken.length - 15);
 
         $(document).ready(function () {
 
@@ -185,47 +190,61 @@
 
 
         function getQType(q) {
-            if (!q.options || q.options.length === 0) return "Text"; // Şık yoksa kesin yazıdır
-            var t = q.questionType ? q.questionType.toString().toLowerCase() : "";
-            if (t.includes("checkbox") || t.includes("çoklu") || t === "2") return "Checkbox";
-            return "Radio"; // Varsayılan şıklı soru
-        }
+             var t = q.questionType ? q.questionType.toString().toLowerCase() : "";
+
+             if (t === "0" || t === "text" || t === "metin") return "Text";
+
+             if (!q.options || q.options.length === 0) return "Text"; // Şık yoksa kesin yazıdır
+             if (t.includes("checkbox") || t.includes("çoklu") || t === "2") return "Checkbox";
+
+             return "Radio"; // Varsayılan şıklı soru
+         }
 
         function loadSurveyData() {
-            var token = localStorage.getItem("token");
-            $.ajax({
-                url: `https://localhost:7283/api/survey/${surveyId}/detail`,
-                type: "GET",
-                headers: { "Authorization": "Bearer " + token },
-                success: function (data) {
-                    $("#surveyTitle").text(data.title);
-                    $("#surveyDesc").text(data.description);
-                    questionsData = data.questions;
+             var token = localStorage.getItem("token");
+             $.ajax({
+                 url: `https://localhost:7283/api/survey/${surveyId}/detail`,
+                 type: "GET",
+                 headers: { "Authorization": "Bearer " + token },
+                 success: function (data) {
+                     $("#surveyTitle").text(data.title);
+                     $("#surveyDesc").text(data.description);
+                     questionsData = data.questions;
 
-                    renderQuestions();
-                    checkDraftAndStart();
-                },
-                error: function (xhr) {
-                    $("#questionContainer").html(`
-                        <div class="text-center py-5 fade-in-up">
-                            <i class="mdi mdi-alert-circle-outline text-danger" style="font-size: 5rem;"></i>
-                            <h4 class="mt-3 font-weight-bold text-dark">Anket Bulunamadı</h4>
-                            <p class="text-muted">Bu anket yayından kaldırılmış, süresi dolmuş veya henüz taslak aşamasında olabilir.</p>
-                            <a href="/Home/Index" class="btn btn-gradient-primary rounded-pill mt-3 px-5 py-2 font-weight-bold shadow-sm">
-                                <i class="mdi mdi-arrow-left me-1"></i> Keşfetmeye Dön
-                            </a>
-                        </div>
-                    `);
+                     renderQuestions();
+                     checkDraftAndStart();
+                 },
+                 error: function (xhr) {
+                     var errorTitle = "Anket Bulunamadı";
+                     var errorMessage = "Bu anket yayından kaldırılmış, süresi dolmuş veya henüz taslak aşamasında olabilir.";
+                     var iconClass = "mdi-alert-circle-outline text-danger";
 
-                    // Üst kısımdaki yükleniyor yazılarını da temizle
-                    $("#surveyTitle").text("Oops! Bir sorun var.");
-                    $("#surveyDesc").text("");
-                    $(".progress-wrapper").hide();
+                     // 🔥 ZATEN ÇÖZÜLDÜ YAKALAYICI
+                     if (xhr.status === 400 && xhr.responseJSON && xhr.responseJSON.errorCode === "ALREADY_SOLVED") {
+                         errorTitle = "Zaten Çözdünüz! ✅";
+                         errorMessage = "Harika! Bu anketi daha önce başarıyla tamamlamışsınız. Aynı ankete birden fazla kez katılamazsınız.";
+                         iconClass = "mdi-check-decagram text-success";
+                     }
 
-                    showErrorToast("Anket yüklenemedi veya erişime kapalı.");
-                }
-            });
-        }
+                     $("#questionContainer").html(`
+                         <div class="text-center py-5 fade-in-up">
+                             <i class="mdi ${iconClass}" style="font-size: 5rem;"></i>
+                             <h4 class="mt-3 font-weight-bold text-dark">${errorTitle}</h4>
+                             <p class="text-muted">${errorMessage}</p>
+                             <a href="/Home/Index" class="btn btn-gradient-primary rounded-pill mt-4 px-5 py-2 font-weight-bold shadow-sm">
+                                 <i class="mdi mdi-arrow-left me-1"></i> Keşfetmeye Dön
+                             </a>
+                         </div>
+                     `);
+
+                     // Sayfadaki diğer elemanları temizle
+                     $("#surveyTitle").text("İşlem Tamamlanamıyor");
+                     $("#surveyDesc").text("");
+                     $(".progress-wrapper").hide();
+                     $("#surveyFooter").hide();
+                 }
+             });
+         }
 
         function renderQuestions() {
             var container = $("#questionContainer");
